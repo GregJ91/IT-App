@@ -1,4 +1,4 @@
-# IT Hub
+# Gardeners Dream IT Hub
 
 A bespoke IT app for raising and handling IT jobs, managing inventory, keeping printer details, and seeing the network across our three sites. It runs on desktop and phone as an installable web app (PWA).
 
@@ -24,7 +24,7 @@ A bespoke IT app for raising and handling IT jobs, managing inventory, keeping p
 | Assignment | Rules table to be supplied |
 | Extras | Comments, internal notes, time tracking, satisfaction rating |
 | Inventory | Laptops, printers, scanners, Raspberry Pis, label printers, cupboard stock (keyboards, mice, screens, toner, labels). QR labels, photos, check-in/out with history, low-stock and warranty alerts, spreadsheet import |
-| Branding | Company branding (logo and colours to be supplied) |
+| Branding | Gardeners Dream: leaf green, lime, sky blue, mint, butter highlight on warm white, DM Sans. Logo in `design/brand/` is a low-res crop from a website screenshot; swap in the original SVG |
 
 ## Phases
 

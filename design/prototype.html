@@ -1,46 +1,57 @@
-<title>IT Hub Prototype</title>
+<title>Gardeners Dream IT Hub</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 /* Layout: app shell — left nav rail on desktop, bottom tab bar on phones; content is a single scrolling column of panels.
    Three style directions share one token set: "clean" (default), "console" (dense ops), "soft" (rounded, friendly).
-   --brand is the company colour and can be changed live from the preview bar. */
+   Gardeners Dream palette, sampled from gardenersdream.co.uk: leaf green, lime, sky blue, mint strip, butter highlight, warm white.
+   --brand is a deeper shade of the logo's leaf green so white button text stays readable. */
 :root {
-  --brand: #2f7a4d;
-  --bg: #f6f7f6;
+  --leaf: #56966e;
+  --lime: #a2c465;
+  --sky: #8cc2d4;
+  --mint: #cee4cf;
+  --butter: #f6eb8a;
+  --logo-bg: #fffdfc;
+  --brand: #3f7c56;
+  --bg: #fffdfc;
   --surface: #ffffff;
-  --surface-2: #f0f2f0;
-  --line: #e1e5e2;
-  --fg: #18201b;
-  --muted: #5d6a62;
+  --surface-2: #f2f6f1;
+  --line: #e2e8e1;
+  --fg: #1b231d;
+  --muted: #5b6a5f;
   --ok: #1f8a4c;
   --warn: #b26a00;
   --bad: #c23b32;
   --info: #2c62b8;
   --on-brand: #ffffff;
-  --font-ui: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-ui: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
   --radius: 8px;
   --radius-sm: 6px;
   --pad: 16px;
   --row: 52px;
   --shadow: 0 1px 2px rgba(20, 30, 24, .06);
-  --brand-soft: color-mix(in srgb, var(--brand) 12%, var(--surface));
-  --brand-line: color-mix(in srgb, var(--brand) 35%, var(--line));
+  --brand-soft: color-mix(in srgb, var(--leaf) 16%, var(--surface));
+  --brand-line: color-mix(in srgb, var(--leaf) 40%, var(--line));
+  --highlight: var(--butter);
+  --on-highlight: #2b2a10;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #111513; --surface: #181d1a; --surface-2: #1f2521; --line: #2c3430;
     --fg: #e6ece8; --muted: #95a39b; --ok: #4cc27f; --warn: #e3a33b; --bad: #f0766c; --info: #79a6ef;
+    --brand: #79b98f; --on-brand: #0e1a12; --highlight: #4a4520; --on-highlight: #f6eb8a;
     --shadow: none; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #111513; --surface: #181d1a; --surface-2: #1f2521; --line: #2c3430;
   --fg: #e6ece8; --muted: #95a39b; --ok: #4cc27f; --warn: #e3a33b; --bad: #f0766c; --info: #79a6ef;
+  --brand: #79b98f; --on-brand: #0e1a12; --highlight: #4a4520; --on-highlight: #f6eb8a;
   --shadow: none; color-scheme: dark;
 }
 
@@ -65,10 +76,10 @@
 
 /* Soft: roomy, rounded, friendly */
 :root[data-style="soft"] {
-  --bg: #f3f5ef; --surface: #fdfdfb; --surface-2: #ecefe6; --line: #e0e4d8;
-  --fg: #1d241c; --muted: #616b5d;
-  --font-ui: "Nunito Sans", system-ui, sans-serif;
-  --font-display: "Bricolage Grotesque", "Nunito Sans", system-ui, sans-serif;
+  --bg: #fffdfc; --surface: #ffffff; --surface-2: #f1f6f0; --line: #e4e9e1;
+  --fg: #1d241c; --muted: #5f6a5c;
+  --font-ui: "DM Sans", system-ui, sans-serif;
+  --font-display: "DM Sans", system-ui, sans-serif;
   --radius: 18px; --radius-sm: 12px; --pad: 20px; --row: 60px;
   --shadow: 0 6px 20px -12px rgba(40, 60, 30, .25);
 }
@@ -133,6 +144,8 @@ p { margin: 0; }
   width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--brand); color: var(--on-brand);
   display: grid; place-items: center; font-weight: 700; font-family: var(--font-display); flex: none;
 }
+.logo-img { height: 44px; width: auto; max-width: 100%; background: var(--logo-bg); border-radius: var(--radius-sm); padding: 4px 6px; display: block; }
+.nav .brand { flex-direction: column; align-items: flex-start; gap: 6px; }
 .brand-name { font-family: var(--font-display); font-weight: 700; line-height: 1.1; }
 .brand-sub { font-size: .75rem; color: var(--muted); }
 .nav a {
@@ -142,7 +155,7 @@ p { margin: 0; }
 .nav a:hover { background: var(--surface-2); color: var(--fg); }
 .nav a[aria-current="page"] { background: var(--brand-soft); color: var(--fg); }
 .nav a[aria-current="page"] svg { color: var(--brand); }
-.nav .count { margin-left: auto; font-size: .75rem; background: var(--surface-2); padding: 0 7px; border-radius: 999px; }
+.nav .count { margin-left: auto; font-size: .75rem; font-weight: 600; background: var(--highlight); color: var(--on-highlight); padding: 0 7px; border-radius: 999px; }
 .nav .spacer { flex: 1; }
 .nav .me { display: flex; align-items: center; gap: 10px; padding: 10px 8px; border-top: 1px solid var(--line); }
 .avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; font-size: .72rem; font-weight: 700; flex: none; border: 1px solid var(--line); }
@@ -245,7 +258,7 @@ main {
 .thread { display: flex; flex-direction: column; gap: 14px; }
 .msg { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; }
 .msg .bubble { background: var(--surface-2); border-radius: var(--radius-sm); padding: 10px 12px; }
-.msg.internal .bubble { background: color-mix(in srgb, var(--warn) 10%, var(--surface)); border: 1px dashed color-mix(in srgb, var(--warn) 50%, var(--line)); }
+.msg.internal .bubble { background: var(--highlight); border: 1px dashed color-mix(in srgb, var(--on-highlight) 35%, transparent); }
 .msg .h { font-size: .78rem; color: var(--muted); margin-bottom: 4px; display: flex; gap: 8px; flex-wrap: wrap; }
 .composer { border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; }
 .composer textarea { width: 100%; border: 0; min-height: 80px; padding: 10px 12px; resize: vertical; background: var(--surface); outline: 0; }
@@ -366,7 +379,7 @@ tbody tr:hover td { background: var(--surface-2); }
 :root[data-style="console"] .chip { border-radius: 2px; }
 :root[data-style="console"] body { font-size: 13px; }
 /* Soft tweaks: bigger headings, pill buttons */
-:root[data-style="soft"] h1 { font-size: 1.9rem; }
+:root[data-style="soft"] h1 { font-size: 1.9rem; letter-spacing: -.02em; }
 :root[data-style="soft"] .btn { border-radius: 999px; padding: 9px 16px; }
 :root[data-style="soft"] .kpi .v { font-size: 2.3rem; }
 
@@ -418,7 +431,7 @@ tbody tr:hover td { background: var(--surface-2); }
     <button data-role-btn="staff" aria-pressed="false">Staff</button>
     <button data-role-btn="signin" aria-pressed="false">Sign-in</button>
   </div>
-  <label for="brandColor">Brand <input type="color" id="brandColor" value="#2f7a4d"></label>
+  <label for="brandColor">Brand <input type="color" id="brandColor" value="#3f7c56"></label>
   <label for="brandName" class="sr"><input type="text" id="brandName" value="IT Hub" aria-label="Company or app name"></label>
 </div>
 
@@ -521,7 +534,7 @@ function shell(content) {
   const me = S.role === 'tech' ? ['Greg J', 'IT admin'] : ['Kirsty P', 'Warehouse'];
   return `<div class="shell">
     <nav class="nav" aria-label="Main">
-      <div class="brand"><div class="logo">${initials(brand())}</div><div><div class="brand-name">${brand()}</div><div class="brand-sub">${S.role === 'tech' ? 'IT team' : 'IT support'}</div></div></div>
+      <div class="brand"><img class="logo-img" src="brand/logo-from-screenshot.png" alt="Gardeners Dream"><div class="brand-sub">${brand()} · ${S.role === 'tech' ? 'IT team' : 'IT support'}</div></div>
       ${items.map(link).join('')}
       <div class="spacer"></div>
       <div class="me"><div class="avatar">${initials(me[0])}</div><div><div style="font-weight:600">${me[0]}</div><div class="brand-sub">${me[1]}</div></div></div>
@@ -801,16 +814,16 @@ pages.raise = () => `<div class="page" style="max-width:760px">
 function signin() {
   const it = S.signinAs === 'tech';
   return `<div class="signin">
-    <div class="side"><div class="brand" style="padding:0"><div class="logo">${initials(brand())}</div><div class="brand-name">${brand()}</div></div>
+    <div class="side"><div class="brand" style="padding:0"><img class="logo-img" src="brand/logo-from-screenshot.png" alt="Gardeners Dream"><span class="brand-name">${brand()}</span></div>
       <div><h1>${it ? 'IT team sign-in' : 'Get IT help, fast'}</h1><p style="margin-top:10px">${it ? 'Tickets, inventory, printers and the network for all three sites.' : 'Raise a job, add a screenshot and see exactly where it is up to.'}</p></div>
-      <p class="hide-sm" style="font-size:.8rem">Logo and colours here come from your company branding.</p></div>
+      <p class="hide-sm" style="font-size:.8rem">Gardeners Dream IT support</p></div>
     <div class="form-side"><form class="card" id="signinForm">
       <div class="who-tabs" role="group" aria-label="Sign in as"><button type="button" data-as="staff" aria-pressed="${!it}">Staff</button><button type="button" data-as="tech" aria-pressed="${it}">IT team</button></div>
       <button type="button" class="sso" data-signin>${ic('slack')}Continue with Slack</button>
       <button type="button" class="sso" data-signin>${ic('globe')}Continue with Google</button>
       <button type="button" class="sso" data-signin>${ic('key')}Continue with Microsoft</button>
       <div class="or">or use email</div>
-      <div class="form" style="gap:10px"><input class="input" id="si-email" type="email" placeholder="you@company.co.uk" aria-label="Email"><input class="input" id="si-pass" type="password" placeholder="Password" aria-label="Password"></div>
+      <div class="form" style="gap:10px"><input class="input" id="si-email" type="email" placeholder="you@gardenersdream.co.uk" aria-label="Email"><input class="input" id="si-pass" type="password" placeholder="Password" aria-label="Password"></div>
       <button class="btn primary" type="submit" style="justify-content:center;padding:10px">Sign in</button>
       ${it ? '<p class="note">IT accounts need an IT role and a second sign-in step (an authenticator code). Staff accounts can only see their own jobs.</p>' : ''}
     </form></div>
