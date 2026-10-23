@@ -537,11 +537,11 @@ tbody tr:hover td { background: var(--surface-2); }
 <div class="preview" role="region" aria-label="Design preview controls">
   <strong>Design preview</strong>
   <div class="seg" role="group" aria-label="Style">
-    <button data-style-btn="clean" aria-pressed="true">A · Clean</button>
+    <button data-style-btn="clean" aria-pressed="false">A · Clean</button>
     <button data-style-btn="console" aria-pressed="false">B · Console</button>
     <button data-style-btn="soft" aria-pressed="false">C · Soft</button>
     <button data-style-btn="mono" aria-pressed="false">D · Mono</button>
-    <button data-style-btn="ocean" aria-pressed="false">E · Ocean</button>
+    <button data-style-btn="ocean" aria-pressed="true">E · Ocean ✓</button>
   </div>
   <div class="seg" role="group" aria-label="View as">
     <button data-role-btn="tech" aria-pressed="true">IT team</button>
@@ -1032,7 +1032,8 @@ document.addEventListener('submit', e => {
 $('#brandColor').addEventListener('input', e => document.documentElement.style.setProperty('--brand', e.target.value));
 $('#brandName').addEventListener('input', () => render());
 
-try { const s = localStorage.getItem('ithub-style'); if (s) { document.documentElement.dataset.style = s; setPressed('data-style-btn', s); syncBrandPicker(); } } catch (_) {}
+{ let st = 'ocean'; try { st = localStorage.getItem('ithub-style') || 'ocean'; } catch (_) {}
+  document.documentElement.dataset.style = st; setPressed('data-style-btn', st); syncBrandPicker(); }
 const h = location.hash.slice(1);
 if (NAV.tech.some(([k]) => k === h)) S.page = h;
 if (NAV.staff.some(([k]) => k === h)) { S.role = 'staff'; S.page = h; setPressed('data-role-btn', 'staff'); }

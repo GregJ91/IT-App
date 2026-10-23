@@ -25,11 +25,12 @@ A bespoke IT app for raising and handling IT jobs, managing inventory, keeping p
 | Assignment | Rules table to be supplied |
 | Extras | Comments, internal notes, time tracking, satisfaction rating |
 | Inventory | Laptops, printers, scanners, Raspberry Pis, label printers, cupboard stock (keyboards, mice, screens, toner, labels). QR labels, photos, check-in/out with history, low-stock and warranty alerts, spreadsheet import |
+| Style | **E · Ocean** chosen: dark navy sidebar, blue accent, Plus Jakarta Sans, soft rounded cards |
 | Branding | Gardeners Dream: leaf green, lime, sky blue, mint, butter highlight on warm white, DM Sans. Logo in `design/brand/` is a low-res crop from a website screenshot; swap in the original SVG |
 
 ## Phases
 
-0. **Design**: agree style direction and page layouts (now)
+0. **Design**: style chosen (E · Ocean); page layouts being finalised
 1. **Tickets + Slack**: tickets, SLAs, assignment, staff portal, sign-in, Slack integration
 2. **Inventory + printers**: assets, stock, QR scanning, photos, printer register (optional SNMP live status)
 3. **Networking**: UniFi integration per site
