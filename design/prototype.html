@@ -2,7 +2,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
 <style>
 /* Layout: app shell — left nav rail on desktop, bottom tab bar on phones; content is a single scrolling column of panels.
    Three style directions share one token set: "clean" (default), "console" (dense ops), "soft" (rounded, friendly).
@@ -37,6 +37,14 @@
   --vh: calc(100vh - 44px);
   --top: 44px;
   --bezel: #1b1f1c;
+  --nav-bg: var(--surface);
+  --nav-fg: var(--fg);
+  --nav-muted: var(--muted);
+  --nav-active: var(--brand-soft);
+  --nav-hover: var(--surface-2);
+  --nav-line: var(--line);
+  --note-bg: var(--highlight);
+  --note-fg: var(--fg);
   --shadow: 0 1px 2px rgba(20, 30, 24, .06);
   --brand-soft: color-mix(in srgb, var(--leaf) 16%, var(--surface));
   --brand-line: color-mix(in srgb, var(--leaf) 40%, var(--line));
@@ -56,6 +64,71 @@
   --fg: #e6ece8; --muted: #95a39b; --ok: #4cc27f; --warn: #e3a33b; --bad: #f0766c; --info: #79a6ef;
   --brand: #79b98f; --on-brand: #0e1a12; --highlight: #4a4520; --on-highlight: #f6eb8a; --bezel: #3b443e;
   --shadow: none; color-scheme: dark;
+}
+
+/* Mono: black and white, high contrast, crisp hairlines */
+:root[data-style="mono"] {
+  --bg: #fafafa; --surface: #ffffff; --surface-2: #f4f4f5; --line: #e4e4e7;
+  --fg: #09090b; --muted: #71717a;
+  --brand: #18181b; --on-brand: #ffffff; --brand-soft: #f1f1f2; --brand-line: #d4d4d8;
+  --highlight: #18181b; --on-highlight: #ffffff;
+  --font-ui: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --radius: 10px; --radius-sm: 8px; --pad: 16px; --row: 50px;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .04);
+  --nav-bg: #fafafa; --nav-fg: #09090b; --nav-muted: #71717a; --nav-active: #ffffff; --nav-hover: #f1f1f2; --nav-line: #e4e4e7;
+  --note-bg: color-mix(in srgb, var(--warn) 10%, var(--surface));
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-style="mono"]:not([data-theme="light"]) {
+    --bg: #09090b; --surface: #111113; --surface-2: #1a1a1d; --line: #27272a;
+    --fg: #fafafa; --muted: #a1a1aa;
+    --brand: #fafafa; --on-brand: #09090b; --brand-soft: #1f1f23; --brand-line: #3f3f46;
+    --highlight: #fafafa; --on-highlight: #09090b; --shadow: none;
+    --nav-bg: #09090b; --nav-fg: #fafafa; --nav-muted: #a1a1aa; --nav-active: #1f1f23; --nav-hover: #18181b; --nav-line: #27272a;
+    color-scheme: dark;
+  }
+}
+:root[data-style="mono"][data-theme="dark"] {
+  --bg: #09090b; --surface: #111113; --surface-2: #1a1a1d; --line: #27272a;
+  --fg: #fafafa; --muted: #a1a1aa;
+  --brand: #fafafa; --on-brand: #09090b; --brand-soft: #1f1f23; --brand-line: #3f3f46;
+  --highlight: #fafafa; --on-highlight: #09090b; --shadow: none;
+  --nav-bg: #09090b; --nav-fg: #fafafa; --nav-muted: #a1a1aa; --nav-active: #1f1f23; --nav-hover: #18181b; --nav-line: #27272a;
+  color-scheme: dark;
+}
+
+/* Ocean: dark navy sidebar, bright blue accent, soft layered cards */
+:root[data-style="ocean"] {
+  --bg: #f4f6fb; --surface: #ffffff; --surface-2: #eef2f8; --line: #e2e8f0;
+  --fg: #0f172a; --muted: #64748b;
+  --brand: #2563eb; --on-brand: #ffffff; --brand-soft: #e8effe; --brand-line: #bcd0fb;
+  --highlight: #2563eb; --on-highlight: #ffffff;
+  --font-ui: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radius: 14px; --radius-sm: 10px; --pad: 18px; --row: 56px;
+  --shadow: 0 1px 2px rgba(15, 23, 42, .05), 0 10px 24px -14px rgba(15, 23, 42, .18);
+  --nav-bg: #0f172a; --nav-fg: #e2e8f0; --nav-muted: #94a3b8; --nav-active: #1e293b; --nav-hover: #172033; --nav-line: #1e293b;
+  --note-bg: color-mix(in srgb, var(--warn) 10%, var(--surface));
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-style="ocean"]:not([data-theme="light"]) {
+    --bg: #0b1120; --surface: #111a2e; --surface-2: #17223a; --line: #22304d;
+    --fg: #e2e8f0; --muted: #8b9bb4;
+    --brand: #5b8cff; --on-brand: #0b1120; --brand-soft: #172449; --brand-line: #2c4486;
+    --highlight: #5b8cff; --on-highlight: #0b1120; --shadow: none;
+    --nav-bg: #080d19; --nav-fg: #e2e8f0; --nav-muted: #8b9bb4; --nav-active: #17223a; --nav-hover: #111a2e; --nav-line: #17223a;
+    color-scheme: dark;
+  }
+}
+:root[data-style="ocean"][data-theme="dark"] {
+  --bg: #0b1120; --surface: #111a2e; --surface-2: #17223a; --line: #22304d;
+  --fg: #e2e8f0; --muted: #8b9bb4;
+  --brand: #5b8cff; --on-brand: #0b1120; --brand-soft: #172449; --brand-line: #2c4486;
+  --highlight: #5b8cff; --on-highlight: #0b1120; --shadow: none;
+  --nav-bg: #080d19; --nav-fg: #e2e8f0; --nav-muted: #8b9bb4; --nav-active: #17223a; --nav-hover: #111a2e; --nav-line: #17223a;
+  color-scheme: dark;
 }
 
 /* Console: dense, square, ops-room feel */
@@ -138,7 +211,7 @@ p { margin: 0; }
 /* ---------- shell ---------- */
 .shell { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: var(--vh); }
 .nav {
-  background: var(--surface); border-right: 1px solid var(--line);
+  background: var(--nav-bg); color: var(--nav-fg); border-right: 1px solid var(--nav-line);
   padding: 16px 12px; display: flex; flex-direction: column; gap: 4px;
   position: sticky; top: var(--top); height: var(--vh); align-self: start;
 }
@@ -153,14 +226,16 @@ p { margin: 0; }
 .brand-sub { font-size: .75rem; color: var(--muted); }
 .nav a {
   display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--radius-sm);
-  color: var(--muted); text-decoration: none; font-weight: 500;
+  color: var(--nav-muted); text-decoration: none; font-weight: 500;
 }
-.nav a:hover { background: var(--surface-2); color: var(--fg); }
-.nav a[aria-current="page"] { background: var(--brand-soft); color: var(--fg); }
+.nav a:hover { background: var(--nav-hover); color: var(--nav-fg); }
+.nav .brand-sub { color: var(--nav-muted); }
+.nav .avatar { background: var(--nav-active); border-color: var(--nav-line); }
+.nav a[aria-current="page"] { background: var(--nav-active); color: var(--nav-fg); }
 .nav a[aria-current="page"] svg { color: var(--brand); }
 .nav .count { margin-left: auto; font-size: .75rem; font-weight: 600; background: var(--highlight); color: var(--on-highlight); padding: 0 7px; border-radius: 999px; }
 .nav .spacer { flex: 1; }
-.nav .me { display: flex; align-items: center; gap: 10px; padding: 10px 8px; border-top: 1px solid var(--line); }
+.nav .me { display: flex; align-items: center; gap: 10px; padding: 10px 8px; border-top: 1px solid var(--nav-line); }
 .avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; font-size: .72rem; font-weight: 700; flex: none; border: 1px solid var(--line); }
 svg.i { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
@@ -261,7 +336,7 @@ main {
 .thread { display: flex; flex-direction: column; gap: 14px; }
 .msg { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; }
 .msg .bubble { background: var(--surface-2); border-radius: var(--radius-sm); padding: 10px 12px; }
-.msg.internal .bubble { background: var(--highlight); border: 1px dashed color-mix(in srgb, var(--on-highlight) 35%, transparent); }
+.msg.internal .bubble { background: var(--note-bg); color: var(--note-fg); border: 1px dashed color-mix(in srgb, var(--warn) 45%, transparent); }
 .msg .h { font-size: .78rem; color: var(--muted); margin-bottom: 4px; display: flex; gap: 8px; flex-wrap: wrap; }
 .composer { border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; }
 .composer textarea { width: 100%; border: 0; min-height: 80px; padding: 10px 12px; resize: vertical; background: var(--surface); outline: 0; }
@@ -382,6 +457,14 @@ tbody tr:hover td { background: var(--surface-2); }
 :root[data-style="console"] .chip { border-radius: 2px; }
 :root[data-style="console"] body { font-size: 13px; }
 /* Soft tweaks: bigger headings, pill buttons */
+:root[data-style="mono"] h1 { letter-spacing: -.03em; font-weight: 600; }
+:root[data-style="mono"] .kpi .v { font-weight: 600; letter-spacing: -.03em; }
+:root[data-style="mono"] .btn.primary:hover { background: color-mix(in srgb, var(--brand) 85%, var(--bg)); }
+:root[data-style="mono"] .panel-head { border-bottom-color: transparent; padding-bottom: 4px; }
+:root[data-style="ocean"] h1 { font-weight: 800; letter-spacing: -.02em; }
+:root[data-style="ocean"] .kpi .v { font-weight: 800; }
+:root[data-style="ocean"] .nav a[aria-current="page"] { box-shadow: inset 3px 0 0 var(--brand); }
+:root[data-style="ocean"] .nav a[aria-current="page"] svg { color: var(--brand); }
 :root[data-style="soft"] h1 { font-size: 1.9rem; letter-spacing: -.02em; }
 :root[data-style="soft"] .btn { border-radius: 999px; padding: 9px 16px; }
 :root[data-style="soft"] .kpi .v { font-size: 2.3rem; }
@@ -457,6 +540,8 @@ tbody tr:hover td { background: var(--surface-2); }
     <button data-style-btn="clean" aria-pressed="true">A · Clean</button>
     <button data-style-btn="console" aria-pressed="false">B · Console</button>
     <button data-style-btn="soft" aria-pressed="false">C · Soft</button>
+    <button data-style-btn="mono" aria-pressed="false">D · Mono</button>
+    <button data-style-btn="ocean" aria-pressed="false">E · Ocean</button>
   </div>
   <div class="seg" role="group" aria-label="View as">
     <button data-role-btn="tech" aria-pressed="true">IT team</button>
@@ -886,6 +971,7 @@ function render() {
 function setPressed(attr, val) { document.querySelectorAll(`[${attr}]`).forEach(b => b.setAttribute('aria-pressed', b.getAttribute(attr) === val)); }
 
 let LAYER = document.body;
+function syncBrandPicker() { const v = getComputedStyle(document.documentElement).getPropertyValue('--brand').trim(); if (/^#[0-9a-f]{6}$/i.test(v)) $('#brandColor').value = v; }
 function toTop() { window.scrollTo(0, 0); document.querySelectorAll('.scroller').forEach(x => { x.scrollTop = 0; }); }
 function setLayout(l) {
   S.layout = l; setPressed('data-layout-btn', l);
@@ -909,7 +995,7 @@ document.addEventListener('click', e => {
   }
   const d = el.dataset;
   if (d.layoutBtn) { setLayout(d.layoutBtn); return; }
-  if (d.styleBtn) { document.documentElement.dataset.style = d.styleBtn; setPressed('data-style-btn', d.styleBtn); try { localStorage.setItem('ithub-style', d.styleBtn); } catch (_) {} return; }
+  if (d.styleBtn) { document.documentElement.style.removeProperty('--brand'); document.documentElement.dataset.style = d.styleBtn; syncBrandPicker(); setPressed('data-style-btn', d.styleBtn); try { localStorage.setItem('ithub-style', d.styleBtn); } catch (_) {} return; }
   if (d.roleBtn) { S.role = d.roleBtn; S.ticket = null; S.staffJob = null; setPressed('data-role-btn', d.roleBtn); render(); toTop(); return; }
   if (d.go) { e.preventDefault(); S.page = d.go; S.ticket = null; S.staffJob = null; render(); toTop(); return; }
   if (d.ticket) { S.page = 'tickets'; S.ticket = +d.ticket; render(); toTop(); return; }
@@ -946,7 +1032,7 @@ document.addEventListener('submit', e => {
 $('#brandColor').addEventListener('input', e => document.documentElement.style.setProperty('--brand', e.target.value));
 $('#brandName').addEventListener('input', () => render());
 
-try { const s = localStorage.getItem('ithub-style'); if (s) { document.documentElement.dataset.style = s; setPressed('data-style-btn', s); } } catch (_) {}
+try { const s = localStorage.getItem('ithub-style'); if (s) { document.documentElement.dataset.style = s; setPressed('data-style-btn', s); syncBrandPicker(); } } catch (_) {}
 const h = location.hash.slice(1);
 if (NAV.tech.some(([k]) => k === h)) S.page = h;
 if (NAV.staff.some(([k]) => k === h)) { S.role = 'staff'; S.page = h; setPressed('data-role-btn', 'staff'); }
