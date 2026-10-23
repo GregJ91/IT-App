@@ -1,0 +1,876 @@
+<title>IT Hub Prototype</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&display=swap">
+<style>
+/* Layout: app shell — left nav rail on desktop, bottom tab bar on phones; content is a single scrolling column of panels.
+   Three style directions share one token set: "clean" (default), "console" (dense ops), "soft" (rounded, friendly).
+   --brand is the company colour and can be changed live from the preview bar. */
+:root {
+  --brand: #2f7a4d;
+  --bg: #f6f7f6;
+  --surface: #ffffff;
+  --surface-2: #f0f2f0;
+  --line: #e1e5e2;
+  --fg: #18201b;
+  --muted: #5d6a62;
+  --ok: #1f8a4c;
+  --warn: #b26a00;
+  --bad: #c23b32;
+  --info: #2c62b8;
+  --on-brand: #ffffff;
+  --font-ui: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --radius: 8px;
+  --radius-sm: 6px;
+  --pad: 16px;
+  --row: 52px;
+  --shadow: 0 1px 2px rgba(20, 30, 24, .06);
+  --brand-soft: color-mix(in srgb, var(--brand) 12%, var(--surface));
+  --brand-line: color-mix(in srgb, var(--brand) 35%, var(--line));
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111513; --surface: #181d1a; --surface-2: #1f2521; --line: #2c3430;
+    --fg: #e6ece8; --muted: #95a39b; --ok: #4cc27f; --warn: #e3a33b; --bad: #f0766c; --info: #79a6ef;
+    --shadow: none; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111513; --surface: #181d1a; --surface-2: #1f2521; --line: #2c3430;
+  --fg: #e6ece8; --muted: #95a39b; --ok: #4cc27f; --warn: #e3a33b; --bad: #f0766c; --info: #79a6ef;
+  --shadow: none; color-scheme: dark;
+}
+
+/* Console: dense, square, ops-room feel */
+:root[data-style="console"] {
+  --bg: #eef0f2; --surface: #ffffff; --surface-2: #e7eaed; --line: #d3d8dd;
+  --fg: #12171c; --muted: #56616c;
+  --font-ui: "IBM Plex Sans", system-ui, sans-serif;
+  --font-display: "IBM Plex Sans", system-ui, sans-serif;
+  --radius: 2px; --radius-sm: 2px; --pad: 12px; --row: 40px; --shadow: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-style="console"]:not([data-theme="light"]) {
+    --bg: #0b0e11; --surface: #12161a; --surface-2: #181d22; --line: #262d34;
+    --fg: #dfe5ea; --muted: #8592a0; color-scheme: dark;
+  }
+}
+:root[data-style="console"][data-theme="dark"] {
+  --bg: #0b0e11; --surface: #12161a; --surface-2: #181d22; --line: #262d34;
+  --fg: #dfe5ea; --muted: #8592a0; color-scheme: dark;
+}
+
+/* Soft: roomy, rounded, friendly */
+:root[data-style="soft"] {
+  --bg: #f3f5ef; --surface: #fdfdfb; --surface-2: #ecefe6; --line: #e0e4d8;
+  --fg: #1d241c; --muted: #616b5d;
+  --font-ui: "Nunito Sans", system-ui, sans-serif;
+  --font-display: "Bricolage Grotesque", "Nunito Sans", system-ui, sans-serif;
+  --radius: 18px; --radius-sm: 12px; --pad: 20px; --row: 60px;
+  --shadow: 0 6px 20px -12px rgba(40, 60, 30, .25);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-style="soft"]:not([data-theme="light"]) {
+    --bg: #141712; --surface: #1c2019; --surface-2: #242920; --line: #30362b;
+    --fg: #e8ece2; --muted: #9ea896; --shadow: none; color-scheme: dark;
+  }
+}
+:root[data-style="soft"][data-theme="dark"] {
+  --bg: #141712; --surface: #1c2019; --surface-2: #242920; --line: #30362b;
+  --fg: #e8ece2; --muted: #9ea896; --shadow: none; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-ui); font-size: 14px; line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -.01em; }
+h2 { font-size: 1rem; font-weight: 600; }
+h3 { font-size: .9rem; font-weight: 600; }
+p { margin: 0; }
+.mono { font-family: var(--font-mono); font-size: .9em; }
+.muted { color: var(--muted); }
+.num { font-variant-numeric: tabular-nums; }
+.label { font-size: .72rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
+
+/* ---------- preview bar (design tool, not part of the app) ---------- */
+.preview {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: var(--fg); color: var(--bg);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 8px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; font-size: .8rem;
+}
+.preview strong { font-weight: 600; margin-right: auto; }
+.seg { display: inline-flex; border: 1px solid color-mix(in srgb, var(--bg) 35%, transparent); border-radius: 999px; overflow: hidden; }
+.seg button { background: none; border: 0; padding: 4px 10px; color: inherit; opacity: .75; }
+.seg button[aria-pressed="true"] { background: var(--bg); color: var(--fg); opacity: 1; }
+.preview label { display: inline-flex; align-items: center; gap: 6px; }
+.preview input[type="color"] { width: 26px; height: 22px; border: 0; padding: 0; background: none; }
+.preview input[type="text"] { width: 120px; padding: 3px 8px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--bg) 35%, transparent); background: transparent; }
+
+/* ---------- shell ---------- */
+.shell { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: calc(100% - 44px); }
+.nav {
+  background: var(--surface); border-right: 1px solid var(--line);
+  padding: 16px 12px; display: flex; flex-direction: column; gap: 4px;
+  position: sticky; top: 44px; height: calc(100vh - 44px); align-self: start;
+}
+.brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 16px; }
+.logo {
+  width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--brand); color: var(--on-brand);
+  display: grid; place-items: center; font-weight: 700; font-family: var(--font-display); flex: none;
+}
+.brand-name { font-family: var(--font-display); font-weight: 700; line-height: 1.1; }
+.brand-sub { font-size: .75rem; color: var(--muted); }
+.nav a {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--radius-sm);
+  color: var(--muted); text-decoration: none; font-weight: 500;
+}
+.nav a:hover { background: var(--surface-2); color: var(--fg); }
+.nav a[aria-current="page"] { background: var(--brand-soft); color: var(--fg); }
+.nav a[aria-current="page"] svg { color: var(--brand); }
+.nav .count { margin-left: auto; font-size: .75rem; background: var(--surface-2); padding: 0 7px; border-radius: 999px; }
+.nav .spacer { flex: 1; }
+.nav .me { display: flex; align-items: center; gap: 10px; padding: 10px 8px; border-top: 1px solid var(--line); }
+.avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; font-size: .72rem; font-weight: 700; flex: none; border: 1px solid var(--line); }
+svg.i { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+main {
+  min-width: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 40px;
+}
+.page { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+.page-head { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; justify-content: space-between; }
+.page-head .sub { color: var(--muted); margin-top: 4px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: var(--radius-sm);
+  border: 1px solid var(--line); background: var(--surface); font-weight: 600; font-size: .85rem; white-space: nowrap;
+}
+.btn:hover { background: var(--surface-2); }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+.btn.primary:hover { background: color-mix(in srgb, var(--brand) 88%, black); }
+.btn svg.i { width: 16px; height: 16px; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); min-width: 0; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px var(--pad); border-bottom: 1px solid var(--line); }
+.panel-body { padding: var(--pad); }
+.grid { display: grid; gap: 16px; }
+.cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.cols-main { grid-template-columns: minmax(0, 1fr) 320px; align-items: start; }
+.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+.kpi { padding: var(--pad); display: flex; flex-direction: column; gap: 6px; }
+.kpi .v { font-family: var(--font-display); font-size: 1.9rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.kpi .d { font-size: .8rem; color: var(--muted); }
+.kpi.alert .v { color: var(--bad); }
+.kpi.warn .v { color: var(--warn); }
+
+/* chips */
+.chip { display: inline-flex; align-items: center; gap: 5px; font-size: .74rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+.chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.chip.plain::before { display: none; }
+.s-new { color: var(--info); background: color-mix(in srgb, var(--info) 12%, var(--surface)); }
+.s-progress { color: var(--brand); background: var(--brand-soft); }
+.s-waiting { color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, var(--surface)); }
+.s-resolved, .s-ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, var(--surface)); }
+.s-closed { color: var(--muted); }
+.s-bad { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, var(--surface)); }
+.prio { font-family: var(--font-mono); font-size: .72rem; font-weight: 500; padding: 1px 6px; border-radius: 4px; border: 1px solid currentColor; }
+.p1 { color: var(--bad); } .p2 { color: var(--warn); } .p3 { color: var(--info); } .p4 { color: var(--muted); }
+
+/* list rows */
+.rows { display: flex; flex-direction: column; }
+.row {
+  display: grid; grid-template-columns: 4px 88px minmax(0, 1fr) 120px 110px 120px; align-items: center; gap: 12px;
+  min-height: var(--row); padding: 8px var(--pad) 8px 0; border-bottom: 1px solid var(--line);
+  background: none; border-left: 0; border-right: 0; border-top: 0; text-align: left; width: 100%;
+}
+.row:last-child { border-bottom: 0; }
+.row:hover { background: var(--surface-2); }
+.row .stripe { align-self: stretch; border-radius: 0 3px 3px 0; }
+.row .title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .meta { font-size: .78rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .sla { font-size: .8rem; font-variant-numeric: tabular-nums; }
+.row .who { display: flex; align-items: center; gap: 6px; font-size: .82rem; min-width: 0; }
+.bg-p1 { background: var(--bad); } .bg-p2 { background: var(--warn); } .bg-p3 { background: var(--info); } .bg-p4 { background: var(--line); }
+.sla.late { color: var(--bad); font-weight: 600; }
+.sla.soon { color: var(--warn); font-weight: 600; }
+
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px var(--pad); border-bottom: 1px solid var(--line); }
+.search { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); flex: 1 1 200px; color: var(--muted); }
+.search input { border: 0; outline: 0; background: none; width: 100%; color: var(--fg); }
+.filter { padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); font-size: .82rem; }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.tab { padding: 6px 12px; border-radius: var(--radius-sm); border: 0; background: none; color: var(--muted); font-weight: 600; font-size: .85rem; }
+.tab[aria-pressed="true"] { background: var(--surface-2); color: var(--fg); }
+
+/* chart */
+.bars { display: grid; grid-template-columns: repeat(14, 1fr); gap: 6px; align-items: end; height: 120px; padding-top: 8px; }
+.bars div { background: color-mix(in srgb, var(--brand) 55%, var(--surface)); border-radius: 3px 3px 0 0; position: relative; min-height: 2px; }
+.bars div.today { background: var(--brand); }
+.bar-axis { display: grid; grid-template-columns: repeat(14, 1fr); gap: 6px; font-size: .68rem; color: var(--muted); text-align: center; margin-top: 6px; }
+.gridline { border-top: 1px dashed var(--line); }
+
+/* key-value */
+.kv { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 8px 12px; font-size: .86rem; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+
+/* ticket detail */
+.shot { border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; background: var(--surface-2); aspect-ratio: 16/10; max-width: 100%; display: flex; flex-direction: column; }
+.shot .bar { height: 14px; background: var(--line); display: flex; gap: 4px; align-items: center; padding: 0 6px; }
+.shot .bar i { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); opacity: .5; }
+.shot .body { flex: 1; padding: 8px; display: grid; gap: 5px; align-content: start; }
+.shot .body span { height: 6px; border-radius: 3px; background: var(--line); }
+.shot .err { margin: 6px auto 0; width: 70%; border: 1px solid var(--bad); border-radius: 4px; padding: 6px; font-size: .62rem; color: var(--bad); background: var(--surface); text-align: center; }
+.thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.thread { display: flex; flex-direction: column; gap: 14px; }
+.msg { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; }
+.msg .bubble { background: var(--surface-2); border-radius: var(--radius-sm); padding: 10px 12px; }
+.msg.internal .bubble { background: color-mix(in srgb, var(--warn) 10%, var(--surface)); border: 1px dashed color-mix(in srgb, var(--warn) 50%, var(--line)); }
+.msg .h { font-size: .78rem; color: var(--muted); margin-bottom: 4px; display: flex; gap: 8px; flex-wrap: wrap; }
+.composer { border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; }
+.composer textarea { width: 100%; border: 0; min-height: 80px; padding: 10px 12px; resize: vertical; background: var(--surface); outline: 0; }
+.composer .foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; justify-content: space-between; padding: 8px; border-top: 1px solid var(--line); background: var(--surface-2); }
+.timer { display: flex; flex-direction: column; gap: 4px; }
+.meter { height: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.meter i { display: block; height: 100%; border-radius: 999px; background: var(--ok); }
+.meter i.warn { background: var(--warn); } .meter i.bad { background: var(--bad); }
+
+/* inventory */
+.assets { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; padding: var(--pad); }
+.asset { border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); padding: 12px; display: flex; flex-direction: column; gap: 8px; text-align: left; }
+.asset:hover { border-color: var(--brand-line); }
+.asset .ph { aspect-ratio: 4/3; border-radius: calc(var(--radius-sm) - 2px); background: var(--surface-2); display: grid; place-items: center; color: var(--muted); max-width: 100%; }
+.asset .ph svg.i { width: 40px; height: 40px; stroke-width: 1.2; }
+.asset .top { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.stock { display: flex; align-items: center; gap: 8px; font-size: .8rem; }
+.stock .meter { flex: 1; }
+
+/* printers / network tables */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+th { text-align: left; font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; padding: 10px var(--pad); border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 10px var(--pad); border-bottom: 1px solid var(--line); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: var(--surface-2); }
+.copy { border: 0; background: none; color: var(--muted); padding: 2px 4px; border-radius: 4px; font-size: .75rem; }
+.copy:hover { background: var(--surface-2); color: var(--fg); }
+.toner { display: flex; gap: 3px; align-items: end; height: 22px; }
+.toner i { width: 7px; border-radius: 2px; background: var(--surface-2); position: relative; height: 100%; overflow: hidden; }
+.toner i b { position: absolute; inset: auto 0 0; display: block; }
+
+.site { display: flex; flex-direction: column; gap: 12px; }
+.site .stat { display: flex; justify-content: space-between; font-size: .85rem; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.site .stat:last-child { border-bottom: 0; }
+.topo { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 8px 0; font-size: .75rem; }
+.topo .node { padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-2); display: flex; align-items: center; gap: 6px; }
+.topo .node.down { border-color: var(--bad); color: var(--bad); }
+.topo .link { width: 1px; height: 12px; background: var(--line); }
+.topo .tier { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+
+/* forms */
+.form { display: flex; flex-direction: column; gap: 16px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-weight: 600; font-size: .86rem; }
+.field .hint { font-size: .78rem; color: var(--muted); }
+.input, .form select, .form textarea {
+  width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface);
+}
+.form textarea { min-height: 110px; resize: vertical; }
+.drop { border: 1.5px dashed var(--brand-line); border-radius: var(--radius); padding: 22px; text-align: center; color: var(--muted); background: var(--brand-soft); display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.prio-pick { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.prio-pick button { border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius-sm); padding: 10px 8px; text-align: left; display: flex; flex-direction: column; gap: 2px; }
+.prio-pick button[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-soft); }
+.prio-pick small { color: var(--muted); font-size: .72rem; }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+
+.steps { display: flex; flex-direction: column; gap: 0; }
+.step { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 12px; padding-bottom: 16px; position: relative; }
+.step::before { content: ""; position: absolute; left: 9px; top: 18px; bottom: 0; width: 2px; background: var(--line); }
+.step:last-child::before { display: none; }
+.step .dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--line); background: var(--surface); }
+.step.done .dot { background: var(--brand); border-color: var(--brand); }
+.step.now .dot { border-color: var(--brand); box-shadow: 0 0 0 4px var(--brand-soft); }
+
+/* settings table */
+.rules td, .rules th { white-space: normal; }
+.tag { display: inline-block; padding: 1px 6px; border-radius: 4px; background: var(--surface-2); font-size: .78rem; margin: 1px 2px 1px 0; }
+.toggle { width: 36px; height: 20px; border-radius: 999px; background: var(--line); position: relative; border: 0; flex: none; }
+.toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--surface); transition: left .15s; }
+.toggle[aria-pressed="true"] { background: var(--brand); }
+.toggle[aria-pressed="true"]::after { left: 18px; }
+.setting { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.setting:last-child { border-bottom: 0; }
+
+/* modal / drawer */
+.scrim { position: fixed; inset: 0; background: rgba(10, 15, 12, .45); z-index: 30; display: flex; justify-content: flex-end; }
+.drawer { width: min(460px, 100%); height: 100%; background: var(--surface); overflow-y: auto; padding: 20px; padding-top: calc(20px + env(safe-area-inset-top, 0px)); padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 16px; }
+.scrim.center { justify-content: center; align-items: center; padding: 16px; }
+.modal { width: min(380px, 100%); background: var(--surface); border-radius: var(--radius); padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.scanner { aspect-ratio: 1; max-width: 100%; border-radius: var(--radius-sm); background: #0d110f; position: relative; display: grid; place-items: center; overflow: hidden; }
+.scanner .frame { width: 60%; aspect-ratio: 1; border: 3px solid var(--brand); border-radius: 12px; box-shadow: 0 0 0 999px rgba(0, 0, 0, .35); }
+.scanner .line { position: absolute; left: 20%; right: 20%; height: 2px; background: var(--brand); top: 50%; animation: scan 2s ease-in-out infinite alternate; }
+@keyframes scan { from { top: 22%; } to { top: 78%; } }
+.photos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.photos div { aspect-ratio: 1; border-radius: var(--radius-sm); background: var(--surface-2); display: grid; place-items: center; color: var(--muted); max-width: 100%; }
+.photos button { aspect-ratio: 1; border-radius: var(--radius-sm); border: 1.5px dashed var(--line); background: none; color: var(--muted); display: grid; place-items: center; }
+.history { font-size: .84rem; display: flex; flex-direction: column; gap: 8px; }
+.history div { display: flex; justify-content: space-between; gap: 8px; }
+
+/* sign in */
+.signin { min-height: calc(100vh - 44px); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.signin .side { background: var(--brand); color: var(--on-brand); padding: 48px; display: flex; flex-direction: column; justify-content: space-between; gap: 24px; }
+.signin .side h1 { font-size: 2.2rem; max-width: 14ch; }
+.signin .side p { opacity: .85; max-width: 38ch; }
+.signin .side .logo { background: var(--on-brand); color: var(--brand); }
+.signin .form-side { display: grid; place-items: center; padding-block: 32px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.signin .card { width: min(380px, 100%); display: flex; flex-direction: column; gap: 14px; }
+.sso { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); font-weight: 600; width: 100%; }
+.sso:hover { background: var(--surface-2); }
+.or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: .78rem; }
+.or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.who-tabs { display: grid; grid-template-columns: 1fr 1fr; background: var(--surface-2); border-radius: var(--radius-sm); padding: 3px; }
+.who-tabs button { border: 0; background: none; padding: 8px; border-radius: calc(var(--radius-sm) - 2px); font-weight: 600; color: var(--muted); }
+.who-tabs button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: var(--shadow); }
+.note { font-size: .8rem; color: var(--muted); background: var(--surface-2); border-radius: var(--radius-sm); padding: 10px 12px; }
+
+.example { font-size: .74rem; color: var(--muted); border: 1px dashed var(--line); border-radius: 999px; padding: 2px 10px; }
+.toast { position: fixed; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-size: .85rem; z-index: 40; }
+
+/* bottom tab bar on phones */
+.tabbar { display: none; }
+.mobile-only { display: none; }
+
+/* Console tweaks: tighter type, mono ids, uppercase headings */
+:root[data-style="console"] h1 { font-size: 1.15rem; text-transform: uppercase; letter-spacing: .04em; }
+:root[data-style="console"] .kpi .v { font-family: var(--font-mono); font-size: 1.6rem; }
+:root[data-style="console"] .chip { border-radius: 2px; }
+:root[data-style="console"] body { font-size: 13px; }
+/* Soft tweaks: bigger headings, pill buttons */
+:root[data-style="soft"] h1 { font-size: 1.9rem; }
+:root[data-style="soft"] .btn { border-radius: 999px; padding: 9px 16px; }
+:root[data-style="soft"] .kpi .v { font-size: 2.3rem; }
+
+@media (max-width: 980px) {
+  .cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cols-main, .cols-2, .cols-3 { grid-template-columns: minmax(0, 1fr); }
+  .row { grid-template-columns: 4px 80px minmax(0, 1fr) 110px 110px; }
+  .row .who { display: none; }
+}
+@media (max-width: 720px) {
+  .shell { grid-template-columns: minmax(0, 1fr); }
+  .nav { display: none; }
+  .mobile-only { display: flex; }
+  main { padding-block: 16px calc(84px + env(safe-area-inset-bottom, 0px)); }
+  .tabbar {
+    display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 15;
+    background: var(--surface); border-top: 1px solid var(--line);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px);
+  }
+  .tabbar a { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 2px; font-size: .66rem; color: var(--muted); text-decoration: none; font-weight: 600; }
+  .tabbar a[aria-current="page"] { color: var(--brand); }
+  .row { grid-template-columns: 4px minmax(0, 1fr) auto; grid-template-areas: "s main status" "s main sla"; row-gap: 2px; }
+  .row .stripe { grid-area: s; }
+  .row .rid { display: none; }
+  .row .main { grid-area: main; }
+  .row .status { grid-area: status; justify-self: end; }
+  .row .sla { grid-area: sla; justify-self: end; }
+  .two, .prio-pick { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .signin { grid-template-columns: minmax(0, 1fr); }
+  .signin .side { padding: 28px max(16px, env(safe-area-inset-right, 0px)) 28px max(16px, env(safe-area-inset-left, 0px)); }
+  .signin .side h1 { font-size: 1.6rem; }
+  .signin .side .hide-sm { display: none; }
+  .preview input[type="text"] { width: 96px; }
+}
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="preview" role="region" aria-label="Design preview controls">
+  <strong>Design preview</strong>
+  <div class="seg" role="group" aria-label="Style">
+    <button data-style-btn="clean" aria-pressed="true">A · Clean</button>
+    <button data-style-btn="console" aria-pressed="false">B · Console</button>
+    <button data-style-btn="soft" aria-pressed="false">C · Soft</button>
+  </div>
+  <div class="seg" role="group" aria-label="View as">
+    <button data-role-btn="tech" aria-pressed="true">IT team</button>
+    <button data-role-btn="staff" aria-pressed="false">Staff</button>
+    <button data-role-btn="signin" aria-pressed="false">Sign-in</button>
+  </div>
+  <label for="brandColor">Brand <input type="color" id="brandColor" value="#2f7a4d"></label>
+  <label for="brandName" class="sr"><input type="text" id="brandName" value="IT Hub" aria-label="Company or app name"></label>
+</div>
+
+<div id="app"></div>
+
+<script>
+/* ---------------- icons ---------------- */
+const P = {
+  dash: '<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
+  ticket: '<path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/><path d="M13 6v12" stroke-dasharray="2 2"/>',
+  box: '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>',
+  printer: '<path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/>',
+  net: '<rect x="9" y="2" width="6" height="5" rx="1"/><rect x="2" y="17" width="6" height="5" rx="1"/><rect x="16" y="17" width="6" height="5" rx="1"/><path d="M12 7v5M5 17v-5h14v5"/>',
+  cog: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  qr: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/>',
+  camera: '<path d="M4 7h3l2-3h6l2 3h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="4"/>',
+  laptop: '<rect x="4" y="5" width="16" height="11" rx="1"/><path d="M2 19h20"/>',
+  chip: '<rect x="6" y="6" width="12" height="12" rx="1"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/>',
+  tag: '<path d="M20 12 12 20 3 11V3h8z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
+  scanner: '<rect x="3" y="12" width="18" height="7" rx="2"/><path d="M5 12 9 5h10"/>',
+  keyboard: '<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/>',
+  monitor: '<rect x="3" y="4" width="18" height="12" rx="1"/><path d="M8 20h8M12 16v4"/>',
+  drop: '<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
+  wifi: '<path d="M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+  switch: '<rect x="2" y="8" width="20" height="8" rx="1"/><path d="M6 12h.01M9 12h.01M12 12h.01M15 12h.01"/>',
+  clip: '<path d="m21 11-8.5 8.5a5 5 0 0 1-7-7L14 4a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L15 7"/>',
+  back: '<path d="m15 18-6-6 6-6"/>',
+  list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+  cloud: '<path d="M7 18a5 5 0 1 1 1-9.9A6 6 0 0 1 19 10a4 4 0 0 1 0 8z"/><path d="m9 13 2 2 4-4"/>',
+  slack: '<rect x="3" y="10" width="8" height="3" rx="1.5"/><rect x="13" y="11" width="8" height="3" rx="1.5"/><rect x="10" y="3" width="3" height="8" rx="1.5"/><rect x="11" y="13" width="3" height="8" rx="1.5"/>',
+  key: '<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M15 8l2 2"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+};
+const ic = (n, cls = '') => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${P[n] || ''}</svg>`;
+
+/* ---------------- example data (all made up) ---------------- */
+const SITES = ['Head Office', 'Warehouse', 'Showroom'];
+const TECHS = { GJ: 'Greg J', SM: 'Sam M', AR: 'Ali R' };
+const TICKETS = [
+  { id: 1048, t: 'Label printer in dispatch printing blank labels', who: 'Kirsty P', site: 'Warehouse', loc: 'Dispatch bench 2', cat: 'Printer', p: 1, st: 'progress', as: 'GJ', sla: '-0h 25m', slaC: 'late', created: '08:12', phone: '07700 900412', shots: 2, asset: 'LP-Zebra-03' },
+  { id: 1047, t: 'Cannot log in to Sage after password change', who: 'Mark D', site: 'Head Office', loc: 'Accounts, desk 4', cat: 'Software', p: 2, st: 'new', as: '', sla: '1h 10m', slaC: 'soon', created: '09:40', phone: '07700 900118', shots: 1 },
+  { id: 1046, t: 'Wi-Fi drops in the showroom back office', who: 'Emma L', site: 'Showroom', loc: 'Back office', cat: 'Network', p: 2, st: 'waiting', as: 'AR', sla: '3h 05m', slaC: '', created: 'Yesterday', phone: '07700 900233', shots: 1 },
+  { id: 1045, t: 'New starter Monday: laptop, email, Slack', who: 'Hannah W', site: 'Head Office', loc: 'HR', cat: 'Onboarding', p: 3, st: 'progress', as: 'SM', sla: '2d 4h', slaC: '', created: 'Yesterday', phone: '07700 900051', shots: 0 },
+  { id: 1044, t: 'Second monitor flickering', who: 'Josh T', site: 'Head Office', loc: 'Marketing, desk 9', cat: 'Hardware', p: 3, st: 'new', as: '', sla: '20h', slaC: '', created: 'Yesterday', phone: '07700 900372', shots: 1 },
+  { id: 1043, t: 'Scanner on goods-in not sending to email', who: 'Dave K', site: 'Warehouse', loc: 'Goods in', cat: 'Printer', p: 3, st: 'progress', as: 'GJ', sla: '1d 2h', slaC: '', created: 'Mon', phone: '07700 900190', shots: 2 },
+  { id: 1042, t: 'Request: wireless mouse for meeting room', who: 'Priya S', site: 'Head Office', loc: 'Meeting room 1', cat: 'Request', p: 4, st: 'resolved', as: 'SM', sla: 'Met', slaC: '', created: 'Mon', phone: '07700 900287', shots: 0 },
+];
+const ASSETS = [
+  { id: 'LT-0142', name: 'Dell Latitude 5440', type: 'Laptop', icon: 'laptop', site: 'Head Office', st: 'In use', user: 'Mark D', serial: 'J7H2XK3', warranty: '14 Mar 2027' },
+  { id: 'LT-0151', name: 'Lenovo ThinkPad E14', type: 'Laptop', icon: 'laptop', site: 'Head Office', st: 'Spare', user: '', serial: 'PF4KQ21', warranty: '02 Nov 2026', warnW: true },
+  { id: 'PR-0007', name: 'HP LaserJet M507', type: 'Printer', icon: 'printer', site: 'Warehouse', st: 'In use', user: 'Dispatch', serial: 'PHBQ71830', warranty: '30 Jun 2027' },
+  { id: 'LP-Zebra-03', name: 'Zebra ZD421 label printer', type: 'Label printer', icon: 'tag', site: 'Warehouse', st: 'Repair', user: 'Dispatch', serial: 'D4J212905', warranty: '11 Jan 2027' },
+  { id: 'SC-0004', name: 'Fujitsu fi-8170', type: 'Scanner', icon: 'scanner', site: 'Warehouse', st: 'In use', user: 'Goods in', serial: 'A21C00418', warranty: '05 May 2027' },
+  { id: 'RPI-0012', name: 'Raspberry Pi 5 (wall display)', type: 'Raspberry Pi', icon: 'chip', site: 'Showroom', st: 'In use', user: 'Showroom TV', serial: 'b8:27:eb:4c:91:0a', warranty: 'n/a' },
+  { id: 'CN-TON59A', name: 'HP 59A toner', type: 'Consumable', icon: 'drop', site: 'Warehouse', stock: 1, min: 3 },
+  { id: 'CN-LBL102', name: 'Zebra 102×152 labels (roll)', type: 'Consumable', icon: 'tag', site: 'Warehouse', stock: 14, min: 10 },
+  { id: 'CN-KB-MX', name: 'Logitech MK295 keyboard + mouse', type: 'Peripheral', icon: 'keyboard', site: 'Head Office', stock: 2, min: 3 },
+  { id: 'CN-MON24', name: 'Dell P2425H 24" monitor', type: 'Peripheral', icon: 'monitor', site: 'Head Office', stock: 4, min: 2 },
+];
+const PRINTERS = [
+  { name: 'WH-Dispatch-Laser', model: 'HP LaserJet M507', ip: '10.20.1.31', mac: '3C:52:82:1A:7F:04', site: 'Warehouse', loc: 'Dispatch', on: true, k: 18, pages: '41,208' },
+  { name: 'WH-Dispatch-Label-03', model: 'Zebra ZD421', ip: '10.20.1.45', mac: '00:07:4D:9E:12:B3', site: 'Warehouse', loc: 'Dispatch bench 2', on: false, k: null, pages: '—' },
+  { name: 'HO-Accounts-MFP', model: 'Ricoh IM C3010', ip: '10.10.1.20', mac: '00:26:73:5C:01:9F', site: 'Head Office', loc: 'Accounts', on: true, k: 64, c: 52, m: 71, y: 33, pages: '118,930' },
+  { name: 'HO-Reception', model: 'Brother HL-L5210DN', ip: '10.10.1.22', mac: '3C:2A:F4:88:20:6E', site: 'Head Office', loc: 'Reception', on: true, k: 81, pages: '9,412' },
+  { name: 'SR-Office', model: 'HP Color LaserJet M255', ip: '10.30.1.20', mac: '9C:7B:EF:41:0C:55', site: 'Showroom', loc: 'Back office', on: true, k: 42, c: 12, m: 58, y: 66, pages: '6,780' },
+];
+const NET = [
+  { site: 'Head Office', wan: 'Up', isp: 'BT Business · 900/110', lat: '7 ms', up: '41 days', clients: 64, gw: 'UDM Pro', sw: ['USW-24-PoE', 'USW-Lite-8'], ap: ['AP Office', 'AP Meeting', 'AP Kitchen'], down: [] },
+  { site: 'Warehouse', wan: 'Up', isp: 'Virgin Business · 500/50', lat: '11 ms', up: '12 days', clients: 38, gw: 'UCG Ultra', sw: ['USW-16-PoE'], ap: ['AP Dispatch', 'AP Goods in', 'AP Yard'], down: [] },
+  { site: 'Showroom', wan: 'Degraded', isp: 'BT Business · 80/20', lat: '48 ms', up: '3 days', clients: 17, gw: 'UCG Ultra', sw: ['USW-Lite-8'], ap: ['AP Floor', 'AP Back office'], down: ['AP Back office'] },
+];
+const DAILY = [3, 5, 2, 4, 6, 3, 1, 0, 4, 7, 5, 3, 6, 4];
+const DAYS = ['F', 'S', 'S', 'M', 'T', 'W', 'T', 'F', 'S', 'S', 'M', 'T', 'W', 'T'];
+
+/* ---------------- state ---------------- */
+const S = { role: 'tech', page: 'dashboard', ticket: null, prio: 3, tFilter: 'open', invTab: 'All', signinAs: 'staff', staffJob: null };
+const statusLabel = { new: 'New', progress: 'In progress', waiting: 'Waiting on user', resolved: 'Resolved', closed: 'Closed' };
+const $ = (s, el = document) => el.querySelector(s);
+const brand = () => $('#brandName').value.trim() || 'IT Hub';
+const initials = n => n.split(' ').map(x => x[0]).join('').slice(0, 2).toUpperCase();
+const chip = st => `<span class="chip s-${st}">${statusLabel[st]}</span>`;
+const prio = p => `<span class="prio p${p}">P${p}</span>`;
+
+function toast(msg) {
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2200);
+}
+
+/* ---------------- nav ---------------- */
+const NAV = {
+  tech: [['dashboard', 'Dashboard', 'dash'], ['tickets', 'Tickets', 'ticket', 6], ['inventory', 'Inventory', 'box'], ['printers', 'Printers', 'printer'], ['network', 'Network', 'net'], ['settings', 'Settings', 'cog']],
+  staff: [['myjobs', 'My jobs', 'list'], ['raise', 'Raise a job', 'plus']],
+};
+function shell(content) {
+  const items = NAV[S.role];
+  const link = ([k, label, icon, n]) => `<a href="#${k}" data-go="${k}" ${S.page === k ? 'aria-current="page"' : ''}>${ic(icon)}<span>${label}</span>${n ? `<span class="count num">${n}</span>` : ''}</a>`;
+  const me = S.role === 'tech' ? ['Greg J', 'IT admin'] : ['Kirsty P', 'Warehouse'];
+  return `<div class="shell">
+    <nav class="nav" aria-label="Main">
+      <div class="brand"><div class="logo">${initials(brand())}</div><div><div class="brand-name">${brand()}</div><div class="brand-sub">${S.role === 'tech' ? 'IT team' : 'IT support'}</div></div></div>
+      ${items.map(link).join('')}
+      <div class="spacer"></div>
+      <div class="me"><div class="avatar">${initials(me[0])}</div><div><div style="font-weight:600">${me[0]}</div><div class="brand-sub">${me[1]}</div></div></div>
+    </nav>
+    <main id="main">${content}</main>
+    <nav class="tabbar" aria-label="Main">${items.map(([k, label, icon]) => `<a href="#${k}" data-go="${k}" ${S.page === k ? 'aria-current="page"' : ''}>${ic(icon)}<span>${label}</span></a>`).join('')}</nav>
+  </div>`;
+}
+
+/* ---------------- tech pages ---------------- */
+function ticketRow(t) {
+  return `<button class="row" data-ticket="${t.id}">
+    <span class="stripe bg-p${t.p}"></span>
+    <span class="rid mono muted">IT-${t.id}</span>
+    <span class="main" style="min-width:0"><div class="title">${t.t}</div><div class="meta">${prio(t.p)} &nbsp;${t.who} · ${t.site} · ${t.loc}${t.shots ? ` · ${t.shots} screenshot${t.shots > 1 ? 's' : ''}` : ''}</div></span>
+    <span class="status">${chip(t.st)}</span>
+    <span class="who">${t.as ? `<span class="avatar">${t.as}</span>${TECHS[t.as]}` : '<span class="muted">Unassigned</span>'}</span>
+    <span class="sla ${t.slaC}">${t.sla === 'Met' ? 'SLA met' : (t.slaC === 'late' ? 'Overdue ' + t.sla.slice(1) : t.sla + ' left')}</span>
+  </button>`;
+}
+
+const pages = {};
+pages.dashboard = () => {
+  const max = 8;
+  const open = TICKETS.filter(t => !['resolved', 'closed'].includes(t.st));
+  return `<div class="page">
+    <div class="page-head"><div><h1>Good morning, Greg</h1><p class="sub">Thursday 23 October · 3 sites · <span class="example">example data</span></p></div>
+      <div class="actions"><button class="btn" data-scan>${ic('qr')}Scan asset</button><button class="btn primary" data-go="tickets">${ic('ticket')}Open queue</button></div></div>
+    <div class="grid cols-4">
+      <div class="panel kpi"><span class="label">Open jobs</span><span class="v">${open.length}</span><span class="d">2 unassigned</span></div>
+      <div class="panel kpi alert"><span class="label">Breaching SLA</span><span class="v">1</span><span class="d">IT-1048 overdue 25 min</span></div>
+      <div class="panel kpi warn"><span class="label">Network alerts</span><span class="v">1</span><span class="d">Showroom AP offline</span></div>
+      <div class="panel kpi warn"><span class="label">Low stock</span><span class="v">2</span><span class="d">HP 59A toner, keyboards</span></div>
+    </div>
+    <div class="grid cols-main">
+      <section class="panel"><div class="panel-head"><h2>Needs attention</h2><a href="#tickets" data-go="tickets" class="muted" style="font-size:.82rem">All tickets</a></div>
+        <div class="rows">${open.slice(0, 4).map(ticketRow).join('')}</div></section>
+      <section class="panel"><div class="panel-head"><h2>Sites</h2><a href="#network" data-go="network" class="muted" style="font-size:.82rem">Network</a></div>
+        <div class="panel-body" style="display:flex;flex-direction:column;gap:10px">
+        ${NET.map(n => `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><div style="font-weight:600">${n.site}</div><div class="muted" style="font-size:.78rem">${n.clients} clients · ${n.lat}</div></div><span class="chip ${n.down.length ? 's-waiting' : 's-ok'}">${n.down.length ? n.down.length + ' device down' : 'All up'}</span></div>`).join('')}
+        </div></section>
+    </div>
+    <div class="grid cols-2">
+      <section class="panel"><div class="panel-head"><h2>Jobs raised, last 14 days</h2><span class="muted num" style="font-size:.82rem">${DAILY.reduce((a, b) => a + b)} total</span></div>
+        <div class="panel-body"><div style="position:relative">
+          <div class="bars">${DAILY.map((v, i) => `<div class="${i === DAILY.length - 1 ? 'today' : ''}" style="height:${v / max * 100}%" title="${v} jobs"></div>`).join('')}</div>
+          <div class="bar-axis">${DAYS.map(d => `<span>${d}</span>`).join('')}</div>
+          <p class="muted" style="font-size:.74rem;margin-top:6px">Bar height: jobs per day, scale 0–8.</p>
+        </div></div></section>
+      <section class="panel"><div class="panel-head"><h2>Coming up</h2></div>
+        <div class="panel-body history">
+          <div><span>Warranty ends · ThinkPad E14 <span class="mono muted">LT-0151</span></span><span class="sla soon">10 days</span></div>
+          <div><span>Low stock · HP 59A toner</span><span class="sla late">1 of 3</span></div>
+          <div><span>Low stock · MK295 keyboard + mouse</span><span class="sla soon">2 of 3</span></div>
+          <div><span>Licence renewal · Microsoft 365 (48 seats)</span><span class="muted">14 Dec</span></div>
+          <div><span>New starter · Hannah W's hire, Monday</span><span class="muted">IT-1045</span></div>
+        </div></section>
+    </div>
+  </div>`;
+};
+
+pages.tickets = () => {
+  if (S.ticket) return ticketDetail(TICKETS.find(t => t.id === S.ticket));
+  const f = { open: t => !['resolved', 'closed'].includes(t.st), mine: t => t.as === 'GJ', unassigned: t => !t.as, all: () => true };
+  const list = TICKETS.filter(f[S.tFilter]);
+  return `<div class="page">
+    <div class="page-head"><div><h1>Tickets</h1><p class="sub">Raised in the app or from Slack (Slack comes later)</p></div>
+      <div class="actions"><button class="btn primary" data-toast="New ticket form opens here">${ic('plus')}New ticket</button></div></div>
+    <section class="panel">
+      <div class="toolbar">
+        <div class="tabs">${[['open', 'Open'], ['mine', 'Mine'], ['unassigned', 'Unassigned'], ['all', 'All']].map(([k, l]) => `<button class="tab" data-tf="${k}" aria-pressed="${S.tFilter === k}">${l}</button>`).join('')}</div>
+        <label class="search" for="tq">${ic('search')}<input id="tq" placeholder="Search tickets, people, locations"></label>
+        <select class="filter" aria-label="Site"><option>All sites</option>${SITES.map(s => `<option>${s}</option>`).join('')}</select>
+        <select class="filter" aria-label="Priority"><option>Any priority</option><option>P1 Critical</option><option>P2 High</option><option>P3 Normal</option><option>P4 Low</option></select>
+      </div>
+      <div class="rows">${list.map(ticketRow).join('') || '<p class="panel-body muted">No tickets match this view.</p>'}</div>
+    </section>
+  </div>`;
+};
+
+function shot(label) {
+  return `<div class="shot"><div class="bar"><i></i><i></i><i></i></div><div class="body"><span style="width:60%"></span><span></span><span style="width:80%"></span><div class="err">${label}</div></div></div>`;
+}
+function ticketDetail(t) {
+  return `<div class="page">
+    <div><button class="btn" data-back>${ic('back')}Tickets</button></div>
+    <div class="page-head"><div><p class="mono muted">IT-${t.id} · ${t.cat}</p><h1>${t.t}</h1>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${prio(t.p)} ${chip(t.st)} <span class="chip plain">${t.site}</span></div></div>
+      <div class="actions"><select class="filter" aria-label="Status">${Object.entries(statusLabel).map(([k, v]) => `<option ${k === t.st ? 'selected' : ''}>${v}</option>`).join('')}</select><button class="btn primary" data-toast="Marked resolved. Requester notified.">Resolve</button></div></div>
+    <div class="grid cols-main">
+      <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+        <section class="panel"><div class="panel-body" style="display:flex;flex-direction:column;gap:14px">
+          <p>Labels come out of the Zebra on bench 2 completely blank since about 8am. Bench 1 is fine. We've tried turning it off and on and reloading the roll. Couriers collect at 2pm.</p>
+          <div class="thumbs">${shot('Print job sent · 0 labels')}${t.shots > 1 ? shot('Media out of range') : ''}</div>
+        </div></section>
+        <section class="panel"><div class="panel-head"><h2>Activity</h2><span class="muted" style="font-size:.8rem">Logged: <span class="num">0h 40m</span></span></div>
+          <div class="panel-body thread">
+            <div class="msg"><div class="avatar">${initials(t.who)}</div><div class="bubble"><div class="h"><strong>${t.who}</strong><span>${t.created}</span><span>Raised from the app</span></div>Couriers are at 2, any chance this can be looked at first?</div></div>
+            <div class="msg"><div class="avatar">GJ</div><div class="bubble"><div class="h"><strong>Greg J</strong><span>08:31</span><span>Reply to requester</span></div>On my way over. Please use bench 1 for now.</div></div>
+            <div class="msg internal"><div class="avatar">GJ</div><div class="bubble"><div class="h"><strong>Greg J</strong><span>08:52</span><span>Internal note, staff can't see this</span></div>Printhead looks worn. Spare ZD421 in Warehouse cupboard B. Checking out <span class="mono">LP-Zebra-05</span> as a swap.</div></div>
+            <div class="composer"><textarea id="reply" aria-label="Reply" placeholder="Write a reply…"></textarea>
+              <div class="foot"><div class="tabs"><button class="tab" aria-pressed="true">Reply</button><button class="tab" aria-pressed="false">Internal note</button></div>
+              <div class="actions"><button class="btn" data-toast="Attach screenshot or photo">${ic('clip')}</button><button class="btn" data-toast="Time logged">+ Time</button><button class="btn primary" data-toast="Reply sent">Send</button></div></div></div>
+          </div></section>
+      </div>
+      <aside style="display:flex;flex-direction:column;gap:16px">
+        <section class="panel"><div class="panel-head"><h2>SLA</h2><span class="chip s-bad">Overdue</span></div>
+          <div class="panel-body" style="display:flex;flex-direction:column;gap:12px">
+            <div class="timer"><div style="display:flex;justify-content:space-between;font-size:.82rem"><span>First response</span><span class="num" style="color:var(--ok)">Met in 19m</span></div><div class="meter"><i style="width:32%"></i></div></div>
+            <div class="timer"><div style="display:flex;justify-content:space-between;font-size:.82rem"><span>Resolve within 4h</span><span class="num sla late">25m over</span></div><div class="meter"><i class="bad" style="width:100%"></i></div></div>
+          </div></section>
+        <section class="panel"><div class="panel-head"><h2>Details</h2></div>
+          <div class="panel-body"><dl class="kv" style="margin:0">
+            <dt>Requester</dt><dd>${t.who}</dd>
+            <dt>Contact</dt><dd><span class="mono">${t.phone}</span> <button class="copy" data-copy="${t.phone}">Copy</button></dd>
+            <dt>Site</dt><dd>${t.site}</dd>
+            <dt>Where</dt><dd>${t.loc}</dd>
+            <dt>Category</dt><dd>${t.cat}</dd>
+            <dt>Assigned</dt><dd>${t.as ? TECHS[t.as] : 'Unassigned'} <span class="muted" style="font-size:.75rem">(by rule: Printer · Warehouse)</span></dd>
+            <dt>Linked asset</dt><dd>${t.asset ? `<span class="mono">${t.asset}</span>` : '—'}</dd>
+          </dl></div></section>
+      </aside>
+    </div>
+  </div>`;
+}
+
+pages.inventory = () => {
+  const types = ['All', 'Laptop', 'Printer', 'Label printer', 'Scanner', 'Raspberry Pi', 'Peripheral', 'Consumable'];
+  const list = ASSETS.filter(a => S.invTab === 'All' || a.type === S.invTab);
+  return `<div class="page">
+    <div class="page-head"><div><h1>Inventory</h1><p class="sub">Kit in use, spares and cupboard stock across all sites</p></div>
+      <div class="actions"><button class="btn" data-scan>${ic('qr')}Scan</button><button class="btn" data-toast="Import from spreadsheet (CSV / Excel)">Import</button><button class="btn primary" data-toast="Add item form opens here">${ic('plus')}Add item</button></div></div>
+    <section class="panel">
+      <div class="toolbar"><div class="tabs">${types.map(t => `<button class="tab" data-inv="${t}" aria-pressed="${S.invTab === t}">${t}</button>`).join('')}</div>
+        <label class="search" for="iq">${ic('search')}<input id="iq" placeholder="Search name, asset tag, serial, person"></label></div>
+      <div class="assets">${list.map(a => `<button class="asset" data-asset="${a.id}">
+        <div class="ph">${ic(a.icon)}</div>
+        <div class="top"><span class="mono muted" style="font-size:.75rem">${a.id}</span>${a.stock != null ? `<span class="chip ${a.stock < a.min ? 's-bad' : 's-ok'}">${a.stock < a.min ? 'Low' : 'OK'}</span>` : `<span class="chip ${a.st === 'In use' ? 's-progress' : a.st === 'Repair' ? 's-waiting' : 's-closed'}">${a.st}</span>`}</div>
+        <div style="font-weight:600">${a.name}</div>
+        ${a.stock != null
+          ? `<div class="stock"><span class="num">${a.stock} in stock</span><div class="meter"><i class="${a.stock < a.min ? 'bad' : ''}" style="width:${Math.min(100, a.stock / (a.min * 2) * 100)}%"></i></div><span class="muted num">min ${a.min}</span></div>`
+          : `<div class="muted" style="font-size:.8rem">${a.user ? a.user + ' · ' : ''}${a.site}${a.warnW ? ` · <span class="sla soon">warranty soon</span>` : ''}</div>`}
+      </button>`).join('')}</div>
+    </section>
+  </div>`;
+};
+
+function assetDrawer(a) {
+  const consumable = a.stock != null;
+  return `<div class="scrim" data-close><aside class="drawer" role="dialog" aria-label="${a.name}">
+    <div style="display:flex;justify-content:space-between;align-items:start;gap:8px"><div><p class="mono muted">${a.id}</p><h1 style="font-size:1.25rem">${a.name}</h1></div><button class="btn" data-close>Close</button></div>
+    <div class="photos"><div>${ic(a.icon)}</div><div>${ic('camera')}</div><button data-toast="Camera opens to add a photo">${ic('plus')}</button></div>
+    ${consumable ? `<div class="panel panel-body" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><span class="label">In stock</span><div class="kpi" style="padding:0"><span class="v">${a.stock}</span></div></div><div class="actions"><button class="btn" data-toast="Took 1 out of stock">− Take one</button><button class="btn" data-toast="Added stock">+ Add</button></div></div>
+      <dl class="kv"><dt>Type</dt><dd>${a.type}</dd><dt>Stored at</dt><dd>${a.site} · Cupboard B, shelf 2</dd><dt>Alert below</dt><dd>${a.min}</dd><dt>Supplier</dt><dd>Example Supplies Ltd</dd></dl>`
+    : `<div class="actions"><button class="btn primary" data-toast="Checked out">Check out to someone</button><button class="btn" data-toast="QR label ready to print">Print QR label</button><button class="btn" data-toast="Ticket linked">Raise ticket</button></div>
+      <dl class="kv"><dt>Type</dt><dd>${a.type}</dd><dt>Status</dt><dd>${a.st}</dd><dt>Assigned to</dt><dd>${a.user || '—'}</dd><dt>Site</dt><dd>${a.site}</dd><dt>Serial / MAC</dt><dd class="mono">${a.serial}</dd><dt>Warranty to</dt><dd>${a.warranty}</dd><dt>Purchased</dt><dd>Mar 2024 · £849</dd></dl>`}
+    <div><h3 style="margin-bottom:8px">History</h3><div class="history">
+      ${consumable ? '<div><span>Greg J took 1 (IT-1043)</span><span class="muted">Mon</span></div><div><span>Delivery: +5</span><span class="muted">2 Oct</span></div>'
+        : '<div><span>Checked out to ' + (a.user || 'storage') + '</span><span class="muted">12 Aug</span></div><div><span>Returned by Leanne B · wiped</span><span class="muted">9 Aug</span></div><div><span>Added to inventory</span><span class="muted">Mar 2024</span></div>'}
+    </div></div>
+  </aside></div>`;
+}
+
+function tonerBars(p) {
+  if (p.k == null) return '<span class="muted">—</span>';
+  const cols = [['k', 'var(--fg)'], ['c', '#16a3c9'], ['m', '#d0368a'], ['y', '#e2b51a']].filter(([k]) => p[k] != null);
+  return `<div class="toner" title="${cols.map(([k]) => k.toUpperCase() + ' ' + p[k] + '%').join(', ')}">${cols.map(([k, c]) => `<i><b style="height:${p[k]}%;background:${c}"></b></i>`).join('')}<span class="num muted" style="font-size:.75rem;margin-left:6px">${Math.min(...cols.map(([k]) => p[k]))}%</span></div>`;
+}
+pages.printers = () => `<div class="page">
+  <div class="page-head"><div><h1>Printers</h1><p class="sub">IP, MAC and location for every printer. Live status and toner come from SNMP polling, planned for Phase 2.</p></div>
+    <div class="actions"><button class="btn primary" data-toast="Add printer form opens here">${ic('plus')}Add printer</button></div></div>
+  <section class="panel"><div class="table-wrap"><table>
+    <thead><tr><th>Status</th><th>Name</th><th>Model</th><th>IP address</th><th>MAC</th><th>Site · location</th><th>Toner</th><th>Pages</th></tr></thead>
+    <tbody>${PRINTERS.map(p => `<tr>
+      <td><span class="chip ${p.on ? 's-ok' : 's-bad'}">${p.on ? 'Online' : 'Offline'}</span></td>
+      <td style="font-weight:600">${p.name}</td><td>${p.model}</td>
+      <td><span class="mono">${p.ip}</span> <button class="copy" data-copy="${p.ip}">Copy</button></td>
+      <td class="mono muted">${p.mac}</td><td>${p.site} · ${p.loc}</td><td>${tonerBars(p)}</td><td class="num">${p.pages}</td></tr>`).join('')}</tbody>
+  </table></div></section>
+  <p class="muted" style="font-size:.8rem">Toner bars: black, then cyan, magenta and yellow for colour models; the figure is the lowest cartridge.</p>
+</div>`;
+
+pages.network = () => `<div class="page">
+  <div class="page-head"><div><h1>Network</h1><p class="sub">From your UniFi controller · Phase 3 preview</p></div><span class="example">example data</span></div>
+  <div class="grid cols-3">${NET.map(n => `<section class="panel"><div class="panel-head"><h2>${n.site}</h2><span class="chip ${n.wan === 'Up' ? 's-ok' : 's-waiting'}">WAN ${n.wan.toLowerCase()}</span></div>
+    <div class="panel-body site">
+      <div class="topo">
+        <div class="node">${ic('globe')}${n.isp.split(' · ')[0]}</div><div class="link"></div>
+        <div class="node">${ic('net')}${n.gw}</div><div class="link"></div>
+        <div class="tier">${n.sw.map(s => `<div class="node">${ic('switch')}${s}</div>`).join('')}</div><div class="link"></div>
+        <div class="tier">${n.ap.map(a => `<div class="node ${n.down.includes(a) ? 'down' : ''}">${ic('wifi')}${a}</div>`).join('')}</div>
+      </div>
+      <div>
+        <div class="stat"><span class="muted">Line</span><span>${n.isp.split(' · ')[1]} Mbps</span></div>
+        <div class="stat"><span class="muted">Latency</span><span class="num">${n.lat}</span></div>
+        <div class="stat"><span class="muted">Gateway uptime</span><span>${n.up}</span></div>
+        <div class="stat"><span class="muted">Clients</span><span class="num">${n.clients}</span></div>
+      </div>
+    </div></section>`).join('')}</div>
+</div>`;
+
+pages.settings = () => `<div class="page">
+  <div class="page-head"><div><h1>Settings</h1><p class="sub">Who gets which job, SLA targets, sign-in and branding</p></div></div>
+  <div class="grid cols-2">
+    <section class="panel"><div class="panel-head"><h2>Assignment rules</h2><span class="example">placeholder until you send your table</span></div>
+      <div class="table-wrap"><table class="rules"><thead><tr><th>Category</th><th>Site</th><th>Assign to</th></tr></thead><tbody>
+        <tr><td>Printer, Label printer</td><td>Warehouse</td><td>Greg J</td></tr>
+        <tr><td>Network</td><td>Any</td><td>Ali R</td></tr>
+        <tr><td>Onboarding, Request</td><td>Head Office</td><td>Sam M</td></tr>
+        <tr><td>Anything else</td><td>Any</td><td>Unassigned queue</td></tr>
+      </tbody></table></div></section>
+    <section class="panel"><div class="panel-head"><h2>SLA targets</h2><span class="example">suggested</span></div>
+      <div class="table-wrap"><table><thead><tr><th>Priority</th><th>First response</th><th>Resolve</th></tr></thead><tbody>
+        <tr><td>${prio(1)} Critical</td><td>15 min</td><td>4 hours</td></tr>
+        <tr><td>${prio(2)} High</td><td>1 hour</td><td>1 working day</td></tr>
+        <tr><td>${prio(3)} Normal</td><td>4 hours</td><td>3 working days</td></tr>
+        <tr><td>${prio(4)} Low</td><td>1 working day</td><td>5 working days</td></tr>
+      </tbody></table></div></section>
+    <section class="panel"><div class="panel-head"><h2>Sign-in methods</h2></div><div class="panel-body">
+      ${[['Slack', true], ['Google', true], ['Microsoft (Entra ID)', true], ['Email and password', true], ['Require two-factor for IT team', true]].map(([l, on]) => `<div class="setting"><span>${l}</span><button class="toggle" aria-pressed="${on}" aria-label="${l}" data-toggle></button></div>`).join('')}
+    </div></section>
+    <section class="panel"><div class="panel-head"><h2>People and roles</h2></div><div class="panel-body history">
+      <div><span><strong>Staff</strong> · raise and track their own jobs</span><span class="num muted">44</span></div>
+      <div><span><strong>IT tech</strong> · tickets, inventory, printers, network</span><span class="num muted">2</span></div>
+      <div><span><strong>IT admin</strong> · everything, plus settings and users</span><span class="num muted">1</span></div>
+    </div></section>
+  </div>
+</div>`;
+
+/* ---------------- staff pages ---------------- */
+const MYJOBS = [TICKETS[0], { id: 1031, t: 'Request: replacement mouse', p: 4, st: 'resolved', sla: '', created: '2 Oct', site: 'Warehouse', loc: 'Dispatch bench 2' }];
+pages.myjobs = () => {
+  if (S.staffJob) return staffJob(MYJOBS.find(j => j.id === S.staffJob));
+  return `<div class="page" style="max-width:760px">
+    <div class="page-head"><div><h1>Hi Kirsty</h1><p class="sub">Your IT jobs and where they're up to</p></div><button class="btn primary" data-go="raise">${ic('plus')}Raise a job</button></div>
+    <section class="panel"><div class="rows">${MYJOBS.map(j => `<button class="row" data-staffjob="${j.id}" style="grid-template-columns:4px 80px minmax(0,1fr) auto">
+      <span class="stripe bg-p${j.p}"></span><span class="rid mono muted">IT-${j.id}</span>
+      <span class="main" style="min-width:0"><div class="title">${j.t}</div><div class="meta">Raised ${j.created} · ${j.loc}</div></span>
+      <span class="status">${chip(j.st)}</span></button>`).join('')}</div></section>
+  </div>`;
+};
+function staffJob(j) {
+  const steps = [['Raised', 'Today 08:12', 'done'], ['Assigned to Greg J', '08:14', 'done'], ['In progress', 'Greg is on site. Please use bench 1 for now.', 'now'], ['Resolved', '', ''], ['Closed', '', '']];
+  return `<div class="page" style="max-width:760px">
+    <div><button class="btn" data-sback>${ic('back')}My jobs</button></div>
+    <div><p class="mono muted">IT-${j.id}</p><h1>${j.t}</h1><div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">${chip(j.st)} <span class="chip plain">${j.loc}</span></div></div>
+    <section class="panel"><div class="panel-head"><h2>Progress</h2></div><div class="panel-body steps">
+      ${steps.map(([a, b, c]) => `<div class="step ${c}"><span class="dot"></span><div><div style="font-weight:600">${a}</div>${b ? `<div class="muted" style="font-size:.82rem">${b}</div>` : ''}</div></div>`).join('')}
+    </div></section>
+    <section class="panel"><div class="panel-head"><h2>Messages</h2></div><div class="panel-body thread">
+      <div class="msg"><div class="avatar">GJ</div><div class="bubble"><div class="h"><strong>Greg J</strong><span>08:31</span></div>On my way over. Please use bench 1 for now.</div></div>
+      <div class="composer"><textarea id="sreply" aria-label="Message IT" placeholder="Add a message or more detail…"></textarea><div class="foot"><button class="btn" data-toast="Attach a screenshot">${ic('clip')}Attach</button><button class="btn primary" data-toast="Sent to IT">Send</button></div></div>
+    </div></section>
+  </div>`;
+}
+pages.raise = () => `<div class="page" style="max-width:760px">
+  <div class="page-head"><div><h1>Raise a job</h1><p class="sub">Tell IT what's wrong. Screenshots help us fix it faster.</p></div></div>
+  <form class="panel panel-body form" id="raiseForm">
+    <div class="field"><label for="f-title">What's the problem?</label><input class="input" id="f-title" value="Label printer printing blank labels"></div>
+    <div class="field"><label for="f-desc">Details</label><textarea id="f-desc">Zebra on dispatch bench 2 prints blank labels since 8am. Bench 1 is fine. Already turned it off and on.</textarea></div>
+    <div class="field"><label>Screenshots or photos</label>
+      <label class="drop" for="f-file">${ic('camera')}<strong>Add screenshots or take a photo</strong><span style="font-size:.8rem">Paste, drag in, or tap to choose. Up to 5 images.</span></label>
+      <input type="file" id="f-file" accept="image/*" multiple hidden></div>
+    <div class="two">
+      <div class="field"><label for="f-site">Site</label><select id="f-site">${SITES.map(s => `<option ${s === 'Warehouse' ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
+      <div class="field"><label for="f-loc">Where exactly?</label><input class="input" id="f-loc" value="Dispatch bench 2"></div>
+    </div>
+    <div class="field"><label>How urgent is it?</label><div class="prio-pick">
+      ${[[1, 'Critical', 'Work has stopped'], [2, 'High', 'Hard to work'], [3, 'Normal', 'Annoying'], [4, 'Low', 'Whenever']].map(([n, l, d]) => `<button type="button" data-prio="${n}" aria-pressed="${S.prio === n}"><span>${prio(n)} <strong>${l}</strong></span><small>${d}</small></button>`).join('')}
+    </div></div>
+    <div class="field"><label for="f-phone">Best number to reach you</label><input class="input mono" id="f-phone" inputmode="tel" value="07700 900412"><span class="hint">Only IT can see this.</span></div>
+    <div class="actions"><button class="btn primary" type="submit">Send to IT</button></div>
+  </form>
+</div>`;
+
+/* ---------------- sign-in ---------------- */
+function signin() {
+  const it = S.signinAs === 'tech';
+  return `<div class="signin">
+    <div class="side"><div class="brand" style="padding:0"><div class="logo">${initials(brand())}</div><div class="brand-name">${brand()}</div></div>
+      <div><h1>${it ? 'IT team sign-in' : 'Get IT help, fast'}</h1><p style="margin-top:10px">${it ? 'Tickets, inventory, printers and the network for all three sites.' : 'Raise a job, add a screenshot and see exactly where it is up to.'}</p></div>
+      <p class="hide-sm" style="font-size:.8rem">Logo and colours here come from your company branding.</p></div>
+    <div class="form-side"><form class="card" id="signinForm">
+      <div class="who-tabs" role="group" aria-label="Sign in as"><button type="button" data-as="staff" aria-pressed="${!it}">Staff</button><button type="button" data-as="tech" aria-pressed="${it}">IT team</button></div>
+      <button type="button" class="sso" data-signin>${ic('slack')}Continue with Slack</button>
+      <button type="button" class="sso" data-signin>${ic('globe')}Continue with Google</button>
+      <button type="button" class="sso" data-signin>${ic('key')}Continue with Microsoft</button>
+      <div class="or">or use email</div>
+      <div class="form" style="gap:10px"><input class="input" id="si-email" type="email" placeholder="you@company.co.uk" aria-label="Email"><input class="input" id="si-pass" type="password" placeholder="Password" aria-label="Password"></div>
+      <button class="btn primary" type="submit" style="justify-content:center;padding:10px">Sign in</button>
+      ${it ? '<p class="note">IT accounts need an IT role and a second sign-in step (an authenticator code). Staff accounts can only see their own jobs.</p>' : ''}
+    </form></div>
+  </div>`;
+}
+
+/* ---------------- render + events ---------------- */
+function render() {
+  const app = $('#app');
+  if (S.role === 'signin') { app.innerHTML = signin(); return; }
+  if (!NAV[S.role].some(([k]) => k === S.page)) S.page = NAV[S.role][0][0];
+  app.innerHTML = shell(pages[S.page]());
+}
+function setPressed(attr, val) { document.querySelectorAll(`[${attr}]`).forEach(b => b.setAttribute('aria-pressed', b.getAttribute(attr) === val)); }
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('button, a'); if (!el) {
+    if (e.target.matches('.scrim')) e.target.remove();
+    return;
+  }
+  const d = el.dataset;
+  if (d.styleBtn) { document.documentElement.dataset.style = d.styleBtn; setPressed('data-style-btn', d.styleBtn); try { localStorage.setItem('ithub-style', d.styleBtn); } catch (_) {} return; }
+  if (d.roleBtn) { S.role = d.roleBtn; S.ticket = null; S.staffJob = null; setPressed('data-role-btn', d.roleBtn); render(); window.scrollTo(0, 0); return; }
+  if (d.go) { e.preventDefault(); S.page = d.go; S.ticket = null; S.staffJob = null; render(); window.scrollTo(0, 0); return; }
+  if (d.ticket) { S.page = 'tickets'; S.ticket = +d.ticket; render(); window.scrollTo(0, 0); return; }
+  if (el.hasAttribute('data-back')) { S.ticket = null; render(); return; }
+  if (d.staffjob) { S.staffJob = +d.staffjob; render(); window.scrollTo(0, 0); return; }
+  if (el.hasAttribute('data-sback')) { S.staffJob = null; render(); return; }
+  if (d.tf) { S.tFilter = d.tf; render(); return; }
+  if (d.inv) { S.invTab = d.inv; render(); return; }
+  if (d.prio) { S.prio = +d.prio; setPressed('data-prio', d.prio); return; }
+  if (d.as) { S.signinAs = d.as; render(); return; }
+  if (el.hasAttribute('data-signin')) { S.role = S.signinAs; setPressed('data-role-btn', S.role); render(); toast('Signed in as ' + (S.role === 'tech' ? 'IT team' : 'staff')); return; }
+  if (el.hasAttribute('data-toggle')) { el.setAttribute('aria-pressed', el.getAttribute('aria-pressed') !== 'true'); return; }
+  if (d.asset) { document.body.insertAdjacentHTML('beforeend', assetDrawer(ASSETS.find(a => a.id === d.asset))); return; }
+  if (el.hasAttribute('data-close')) { el.closest('.scrim')?.remove(); return; }
+  if (el.hasAttribute('data-scan')) {
+    document.body.insertAdjacentHTML('beforeend', `<div class="scrim center" data-close><div class="modal" role="dialog" aria-label="Scan asset"><h2>Scan an asset label</h2><div class="scanner"><div class="frame"></div><div class="line"></div></div><p class="muted" style="font-size:.82rem">Point the camera at the QR label. In the real app this opens the item straight away.</p><div class="actions"><button class="btn" data-close>Cancel</button><button class="btn primary" data-scanhit>Simulate a scan</button></div></div></div>`);
+    return;
+  }
+  if (el.hasAttribute('data-scanhit')) { el.closest('.scrim').remove(); S.page = 'inventory'; render(); document.body.insertAdjacentHTML('beforeend', assetDrawer(ASSETS[3])); return; }
+  if (d.copy) {
+    const txt = d.copy;
+    const done = () => toast('Copied ' + txt);
+    try { navigator.clipboard.writeText(txt).then(done, () => toast(txt)); } catch (_) { toast(txt); }
+    return;
+  }
+  if (d.toast) { toast(d.toast); return; }
+});
+document.addEventListener('submit', e => {
+  e.preventDefault();
+  if (e.target.id === 'raiseForm') { toast('Sent to IT as IT-1049'); S.page = 'myjobs'; render(); }
+  if (e.target.id === 'signinForm') { S.role = S.signinAs; setPressed('data-role-btn', S.role); render(); }
+});
+$('#brandColor').addEventListener('input', e => document.documentElement.style.setProperty('--brand', e.target.value));
+$('#brandName').addEventListener('input', () => render());
+
+try { const s = localStorage.getItem('ithub-style'); if (s) { document.documentElement.dataset.style = s; setPressed('data-style-btn', s); } } catch (_) {}
+const h = location.hash.slice(1);
+if (NAV.tech.some(([k]) => k === h)) S.page = h;
+if (NAV.staff.some(([k]) => k === h)) { S.role = 'staff'; S.page = h; setPressed('data-role-btn', 'staff'); }
+render();
+</script>
