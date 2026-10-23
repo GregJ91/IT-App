@@ -432,6 +432,7 @@ tbody tr:hover td { background: var(--surface-2); }
 .stage figure { margin: 0; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .stage figcaption { font-size: .78rem; color: var(--muted); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
 .dev-desk { flex: 1 1 560px; max-width: 1280px; }
+.stage figure[hidden] { display: none; }
 .dev-phone { flex: 0 1 410px; }
 .desk-box { width: 100%; height: calc(800px * var(--s, .6)); }
 .phone-box { width: 100%; max-width: 410px; height: calc(820px * var(--ps, 1)); }
@@ -462,8 +463,9 @@ tbody tr:hover td { background: var(--surface-2); }
     <button data-role-btn="staff" aria-pressed="false">Staff</button>
     <button data-role-btn="signin" aria-pressed="false">Sign-in</button>
   </div>
-  <div class="seg" role="group" aria-label="Layout">
-    <button data-layout-btn="devices" aria-pressed="true">Desktop + phone</button>
+  <div class="seg" role="group" aria-label="Show as">
+    <button data-layout-btn="desk" aria-pressed="true">Desktop</button>
+    <button data-layout-btn="phone" aria-pressed="false">Phone</button>
     <button data-layout-btn="full" aria-pressed="false">Full screen</button>
   </div>
   <label for="brandColor">Brand <input type="color" id="brandColor" value="#3f7c56"></label>
@@ -888,6 +890,7 @@ function toTop() { window.scrollTo(0, 0); document.querySelectorAll('.scroller')
 function setLayout(l) {
   S.layout = l; setPressed('data-layout-btn', l);
   $('#full').hidden = l !== 'full'; $('#devices').hidden = l === 'full';
+  $('.dev-desk').hidden = l !== 'desk'; $('.dev-phone').hidden = l !== 'phone';
   try { localStorage.setItem('ithub-layout', l); } catch (_) {}
   fit();
 }
@@ -948,6 +951,7 @@ const h = location.hash.slice(1);
 if (NAV.tech.some(([k]) => k === h)) S.page = h;
 if (NAV.staff.some(([k]) => k === h)) { S.role = 'staff'; S.page = h; setPressed('data-role-btn', 'staff'); }
 render();
-let lay = 'devices'; try { lay = localStorage.getItem('ithub-layout') || 'devices'; } catch (_) {}
+let lay = 'desk'; try { lay = localStorage.getItem('ithub-layout') || 'desk'; } catch (_) {}
+if (!['desk', 'phone', 'full'].includes(lay)) lay = 'desk';
 setLayout(lay);
 </script>
