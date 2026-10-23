@@ -439,9 +439,8 @@ tbody tr:hover td { background: var(--surface-2); }
 .sso:hover { background: var(--surface-2); }
 .or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: .78rem; }
 .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
-.who-tabs { display: grid; grid-template-columns: 1fr 1fr; background: var(--surface-2); border-radius: var(--radius-sm); padding: 3px; }
-.who-tabs button { border: 0; background: none; padding: 8px; border-radius: calc(var(--radius-sm) - 2px); font-weight: 600; color: var(--muted); }
-.who-tabs button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: var(--shadow); }
+.qr-box { align-self: center; width: 180px; max-width: 100%; padding: 8px; background: #ffffff; border-radius: var(--radius-sm); border: 1px solid var(--line); }
+.qr { display: block; width: 100%; height: auto; }
 .note { font-size: .8rem; color: var(--muted); background: var(--surface-2); border-radius: var(--radius-sm); padding: 10px 12px; }
 
 .example { font-size: .74rem; color: var(--muted); border: 1px dashed var(--line); border-radius: 999px; padding: 2px 10px; }
@@ -547,6 +546,7 @@ tbody tr:hover td { background: var(--surface-2); }
     <button data-role-btn="tech" aria-pressed="true">IT team</button>
     <button data-role-btn="staff" aria-pressed="false">Staff</button>
     <button data-role-btn="signin" aria-pressed="false">Sign-in</button>
+    <button data-role-btn="invite" aria-pressed="false">IT invite</button>
   </div>
   <div class="seg" role="group" aria-label="Show as">
     <button data-layout-btn="desk" aria-pressed="true">Desktop</button>
@@ -638,7 +638,7 @@ const DAILY = [3, 5, 2, 4, 6, 3, 1, 0, 4, 7, 5, 3, 6, 4];
 const DAYS = ['F', 'S', 'S', 'M', 'T', 'W', 'T', 'F', 'S', 'S', 'M', 'T', 'W', 'T'];
 
 /* ---------------- state ---------------- */
-const S = { role: 'tech', page: 'dashboard', ticket: null, prio: 3, tFilter: 'open', invTab: 'All', signinAs: 'staff', staffJob: null };
+const S = { role: 'tech', page: 'dashboard', ticket: null, prio: 3, tFilter: 'open', invTab: 'All', inviteStep: 1, staffJob: null };
 const statusLabel = { new: 'New', progress: 'In progress', waiting: 'Waiting on user', resolved: 'Resolved', closed: 'Closed' };
 const $ = (s, el = document) => el.querySelector(s);
 const brand = () => $('#brandName').value.trim() || 'IT Hub';
@@ -882,13 +882,21 @@ pages.settings = () => `<div class="page">
         <tr><td>${prio(4)} Low</td><td>1 working day</td><td>5 working days</td></tr>
       </tbody></table></div></section>
     <section class="panel"><div class="panel-head"><h2>Sign-in methods</h2></div><div class="panel-body">
-      ${[['Slack', true], ['Google', true], ['Microsoft (Entra ID)', true], ['Email and password', true], ['Require two-factor for IT team', true]].map(([l, on]) => `<div class="setting"><span>${l}</span><button class="toggle" aria-pressed="${on}" aria-label="${l}" data-toggle></button></div>`).join('')}
+      ${[['Slack', true], ['Google', true], ['Microsoft (Entra ID)', true], ['Email and password', true], ['Require an authenticator code for IT team', true], ['IT team accounts by invite only', true]].map(([l, on]) => `<div class="setting"><span>${l}</span><button class="toggle" aria-pressed="${on}" aria-label="${l}" data-toggle></button></div>`).join('')}
     </div></section>
-    <section class="panel"><div class="panel-head"><h2>People and roles</h2></div><div class="panel-body history">
-      <div><span><strong>Staff</strong> · raise and track their own jobs</span><span class="num muted">44</span></div>
-      <div><span><strong>IT tech</strong> · tickets, inventory, printers, network</span><span class="num muted">2</span></div>
-      <div><span><strong>IT admin</strong> · everything, plus settings and users</span><span class="num muted">1</span></div>
-    </div></section>
+    <section class="panel"><div class="panel-head"><h2>IT team</h2><button class="btn primary" data-invite-open>${ic('plus')}Invite</button></div>
+      <div class="panel-body" style="display:flex;flex-direction:column;gap:14px">
+        <div class="history">
+          <div><span style="display:flex;gap:8px;align-items:center"><span class="avatar">GJ</span><span><strong>Greg J</strong> · IT admin</span></span><span class="muted">Laptop, iPhone</span></div>
+          <div><span style="display:flex;gap:8px;align-items:center"><span class="avatar">SM</span><span><strong>Sam M</strong> · IT tech</span></span><span class="muted">Laptop</span></div>
+          <div><span style="display:flex;gap:8px;align-items:center"><span class="avatar">AR</span><span><strong>Ali R</strong> · IT tech</span></span><span class="muted">Android</span></div>
+        </div>
+        <div><span class="label">Waiting to accept</span>
+          <div class="setting" style="flex-wrap:wrap"><span><strong>Jamie F</strong> · IT tech<br><span class="muted" style="font-size:.8rem">Invited 21 Oct by Greg J · link expires 28 Oct</span></span>
+            <span class="actions"><button class="btn" data-copy="https://it.gardenersdream.co.uk/invite/7f3k-29qa">Copy link</button><button class="btn" data-toast="Invite sent again">Resend</button><button class="btn" data-toast="Invite cancelled. The link no longer works.">Cancel</button></span></div>
+        </div>
+        <p class="note">Staff sign in with Slack, Google, Microsoft or email and only see their own jobs (44 people). IT tech can use tickets, inventory, printers and network. IT admin can also change settings and invite people.</p>
+      </div></section>
   </div>
 </div>`;
 
@@ -940,28 +948,85 @@ pages.raise = () => `<div class="page" style="max-width:760px">
 
 /* ---------------- sign-in ---------------- */
 function signin() {
-  const it = S.signinAs === 'tech';
   return `<div class="signin">
     <div class="side"><div class="brand" style="padding:0"><img class="logo-img" src="brand/logo-from-screenshot.png" alt="Gardeners Dream"><span class="brand-name">${brand()}</span></div>
-      <div><h1>${it ? 'IT team sign-in' : 'Get IT help, fast'}</h1><p style="margin-top:10px">${it ? 'Tickets, inventory, printers and the network for all three sites.' : 'Raise a job, add a screenshot and see exactly where it is up to.'}</p></div>
+      <div><h1>Get IT help, fast</h1><p style="margin-top:10px">Raise a job, add a screenshot and see exactly where it is up to.</p></div>
       <p class="hide-sm" style="font-size:.8rem">Gardeners Dream IT support</p></div>
     <div class="form-side"><form class="card" id="signinForm">
-      <div class="who-tabs" role="group" aria-label="Sign in as"><button type="button" data-as="staff" aria-pressed="${!it}">Staff</button><button type="button" data-as="tech" aria-pressed="${it}">IT team</button></div>
+      <h2 style="font-size:1.25rem">Sign in</h2>
       <button type="button" class="sso" data-signin>${ic('slack')}Continue with Slack</button>
       <button type="button" class="sso" data-signin>${ic('globe')}Continue with Google</button>
       <button type="button" class="sso" data-signin>${ic('key')}Continue with Microsoft</button>
       <div class="or">or use email</div>
       <div class="form" style="gap:10px"><input class="input" id="si-email" type="email" placeholder="you@gardenersdream.co.uk" aria-label="Email"><input class="input" id="si-pass" type="password" placeholder="Password" aria-label="Password"></div>
       <button class="btn primary" type="submit" style="justify-content:center;padding:10px">Sign in</button>
-      ${it ? '<p class="note">IT accounts need an IT role and a second sign-in step (an authenticator code). Staff accounts can only see their own jobs.</p>' : ''}
+      <p class="note">IT team: open the invite link you were sent. After that, sign in here the same way on any phone or computer and you'll get the IT team view.</p>
     </form></div>
   </div>`;
+}
+
+/* ---------------- IT invite (link from email or Slack) ---------------- */
+function fakeQR(seed) {
+  const n = 21; let x = seed, cells = '';
+  const finder = (r, c) => [[0, 0], [0, n - 7], [n - 7, 0]].some(([fr, fc]) => r >= fr && r < fr + 7 && c >= fc && c < fc + 7);
+  const finderOn = (r, c) => { const [fr, fc] = r < 7 ? (c < 7 ? [0, 0] : [0, n - 7]) : [n - 7, 0]; const a = r - fr, b = c - fc; return a === 0 || a === 6 || b === 0 || b === 6 || (a >= 2 && a <= 4 && b >= 2 && b <= 4); };
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+    x = (x * 1103515245 + 12345) & 0x7fffffff;
+    const on = finder(r, c) ? finderOn(r, c) : (x >> 16) % 2 === 0;
+    if (on) cells += `<rect x="${c}" y="${r}" width="1" height="1"/>`;
+  }
+  return `<svg viewBox="-2 -2 25 25" class="qr" role="img" aria-label="QR code"><rect x="-2" y="-2" width="25" height="25" fill="#ffffff"/><g fill="#0f172a">${cells}</g></svg>`;
+}
+function invite() {
+  const st = S.inviteStep;
+  const steps = ['Choose how you sign in', 'Add an authenticator code', 'Use it on your phone too'];
+  const head = `<div class="label">Step ${st} of 3 · ${steps[st - 1]}</div><div class="meter"><i style="width:${st / 3 * 100}%;background:var(--brand)"></i></div>`;
+  const body = {
+    1: `<h2 style="font-size:1.25rem">Join the IT team</h2>
+      <p class="muted">Greg J invited <strong style="color:var(--fg)">jamie.f@gardenersdream.co.uk</strong> as an <strong style="color:var(--fg)">IT tech</strong>. This link works once and expires on 28 October.</p>
+      <button type="button" class="sso" data-invstep="2">${ic('key')}Continue with Microsoft</button>
+      <button type="button" class="sso" data-invstep="2">${ic('globe')}Continue with Google</button>
+      <button type="button" class="sso" data-invstep="2">${ic('slack')}Continue with Slack</button>
+      <div class="or">or set a password</div>
+      <div class="form" style="gap:10px"><input class="input" id="inv-pass" type="password" placeholder="New password" aria-label="New password"><input class="input" id="inv-pass2" type="password" placeholder="Type it again" aria-label="Type the password again"></div>
+      <button type="button" class="btn primary" data-invstep="2" style="justify-content:center;padding:10px">Continue</button>`,
+    2: `<h2 style="font-size:1.25rem">Add an authenticator code</h2>
+      <p class="muted">IT accounts can see the whole network, so they need a second step. Scan this with Microsoft Authenticator, Google Authenticator or your password manager.</p>
+      <div class="qr-box">${fakeQR(7)}</div>
+      <div class="field"><label for="inv-code">Enter the 6-digit code</label><input class="input mono" id="inv-code" inputmode="numeric" value="482 913" style="letter-spacing:.2em;text-align:center;font-size:1.1rem"></div>
+      <button type="button" class="btn primary" data-invstep="3" style="justify-content:center;padding:10px">Verify and continue</button>`,
+    3: `<h2 style="font-size:1.25rem">You're in, Jamie</h2>
+      <p class="muted">Your IT account is ready on this device. To use it on your phone as well, scan this code with the phone's camera. It signs you in there and stops working after 10 minutes.</p>
+      <div class="qr-box">${fakeQR(23)}</div>
+      <p class="note">On the phone, tap Share then <strong>Add to Home Screen</strong> (iPhone) or <strong>Install app</strong> (Android) so it opens like an app. On another computer, just sign in the way you chose in step 1.</p>
+      <button type="button" class="btn primary" data-invdone style="justify-content:center;padding:10px">Open the IT dashboard</button>`,
+  }[st];
+  return `<div class="signin">
+    <div class="side"><div class="brand" style="padding:0"><img class="logo-img" src="brand/logo-from-screenshot.png" alt="Gardeners Dream"><span class="brand-name">${brand()}</span></div>
+      <div><h1>IT team invite</h1><p style="margin-top:10px">Tickets, inventory, printers and the network for all three sites. IT accounts are by invite only.</p></div>
+      <p class="hide-sm" style="font-size:.8rem">Link from Greg J · it.gardenersdream.co.uk/invite/7f3k-29qa</p></div>
+    <div class="form-side"><div class="card">${head}${body}</div></div>
+  </div>`;
+}
+function inviteModal() {
+  return `<div class="scrim center" data-close><form class="modal" id="inviteForm" role="dialog" aria-label="Invite to IT team">
+    <h2>Invite to the IT team</h2>
+    <div class="form" style="gap:12px">
+      <div class="field"><label for="iv-name">Name</label><input class="input" id="iv-name" value="Jamie F"></div>
+      <div class="field"><label for="iv-email">Work email</label><input class="input" id="iv-email" type="email" value="jamie.f@gardenersdream.co.uk"></div>
+      <div class="field"><label for="iv-role">Role</label><select id="iv-role"><option>IT tech</option><option>IT admin</option></select></div>
+      <div class="field"><label for="iv-via">Send the link by</label><select id="iv-via"><option>Email</option><option>Slack message</option><option>Copy link only</option></select></div>
+    </div>
+    <p class="note">The link works once and expires after 7 days. They pick how to sign in and add an authenticator code.</p>
+    <div class="actions" style="justify-content:flex-end"><button type="button" class="btn" data-close>Cancel</button><button type="submit" class="btn primary">Send invite</button></div>
+  </form></div>`;
 }
 
 /* ---------------- render + events ---------------- */
 function render() {
   let html;
   if (S.role === 'signin') html = signin();
+  else if (S.role === 'invite') html = invite();
   else {
   if (!NAV[S.role].some(([k]) => k === S.page)) S.page = NAV[S.role][0][0];
   html = shell(pages[S.page]());
@@ -996,7 +1061,7 @@ document.addEventListener('click', e => {
   const d = el.dataset;
   if (d.layoutBtn) { setLayout(d.layoutBtn); return; }
   if (d.styleBtn) { document.documentElement.style.removeProperty('--brand'); document.documentElement.dataset.style = d.styleBtn; syncBrandPicker(); setPressed('data-style-btn', d.styleBtn); try { localStorage.setItem('ithub-style', d.styleBtn); } catch (_) {} return; }
-  if (d.roleBtn) { S.role = d.roleBtn; S.ticket = null; S.staffJob = null; setPressed('data-role-btn', d.roleBtn); render(); toTop(); return; }
+  if (d.roleBtn) { if (d.roleBtn === 'invite') S.inviteStep = 1; S.role = d.roleBtn; S.ticket = null; S.staffJob = null; setPressed('data-role-btn', d.roleBtn); render(); toTop(); return; }
   if (d.go) { e.preventDefault(); S.page = d.go; S.ticket = null; S.staffJob = null; render(); toTop(); return; }
   if (d.ticket) { S.page = 'tickets'; S.ticket = +d.ticket; render(); toTop(); return; }
   if (el.hasAttribute('data-back')) { S.ticket = null; render(); return; }
@@ -1005,8 +1070,10 @@ document.addEventListener('click', e => {
   if (d.tf) { S.tFilter = d.tf; render(); return; }
   if (d.inv) { S.invTab = d.inv; render(); return; }
   if (d.prio) { S.prio = +d.prio; setPressed('data-prio', d.prio); return; }
-  if (d.as) { S.signinAs = d.as; render(); return; }
-  if (el.hasAttribute('data-signin')) { S.role = S.signinAs; setPressed('data-role-btn', S.role); render(); toast('Signed in as ' + (S.role === 'tech' ? 'IT team' : 'staff')); return; }
+  if (d.invstep) { S.inviteStep = +d.invstep; render(); toTop(); return; }
+  if (el.hasAttribute('data-invdone')) { S.role = 'tech'; S.page = 'dashboard'; S.inviteStep = 1; setPressed('data-role-btn', 'tech'); render(); toTop(); toast('Welcome to the IT team'); return; }
+  if (el.hasAttribute('data-invite-open')) { LAYER.insertAdjacentHTML('beforeend', inviteModal()); return; }
+  if (el.hasAttribute('data-signin')) { S.role = 'staff'; setPressed('data-role-btn', 'staff'); render(); toast('Signed in'); return; }
   if (el.hasAttribute('data-toggle')) { el.setAttribute('aria-pressed', el.getAttribute('aria-pressed') !== 'true'); return; }
   if (d.asset) { LAYER.insertAdjacentHTML('beforeend', assetDrawer(ASSETS.find(a => a.id === d.asset))); return; }
   if (el.hasAttribute('data-close')) { el.closest('.scrim')?.remove(); return; }
@@ -1027,7 +1094,8 @@ document.addEventListener('submit', e => {
   e.preventDefault();
   LAYER = e.target.closest('.device') || document.body;
   if (e.target.id === 'raiseForm') { toast('Sent to IT as IT-1049'); S.page = 'myjobs'; render(); }
-  if (e.target.id === 'signinForm') { S.role = S.signinAs; setPressed('data-role-btn', S.role); render(); }
+  if (e.target.id === 'signinForm') { S.role = 'staff'; setPressed('data-role-btn', 'staff'); render(); }
+  if (e.target.id === 'inviteForm') { e.target.closest('.scrim').remove(); toast('Invite sent to ' + $('#iv-email', e.target).value); }
 });
 $('#brandColor').addEventListener('input', e => document.documentElement.style.setProperty('--brand', e.target.value));
 $('#brandName').addEventListener('input', () => render());
