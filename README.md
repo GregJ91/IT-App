@@ -6,6 +6,7 @@ A bespoke IT app for raising and handling IT jobs, managing inventory, keeping p
 
 **Design stage.** `design/prototype.html` is a clickable prototype with example data. Open it in a browser. The bar at the top lets you:
 
+- see a desktop screen and a phone side by side (both clickable), or switch to full screen
 - switch between three style directions: **A · Clean**, **B · Console**, **C · Soft**
 - view the app as the **IT team**, as **Staff**, or see the **Sign-in** screen
 - try a brand colour and a name

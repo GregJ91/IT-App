@@ -34,6 +34,9 @@
   --radius-sm: 6px;
   --pad: 16px;
   --row: 52px;
+  --vh: calc(100vh - 44px);
+  --top: 44px;
+  --bezel: #1b1f1c;
   --shadow: 0 1px 2px rgba(20, 30, 24, .06);
   --brand-soft: color-mix(in srgb, var(--leaf) 16%, var(--surface));
   --brand-line: color-mix(in srgb, var(--leaf) 40%, var(--line));
@@ -44,14 +47,14 @@
   :root:not([data-theme="light"]) {
     --bg: #111513; --surface: #181d1a; --surface-2: #1f2521; --line: #2c3430;
     --fg: #e6ece8; --muted: #95a39b; --ok: #4cc27f; --warn: #e3a33b; --bad: #f0766c; --info: #79a6ef;
-    --brand: #79b98f; --on-brand: #0e1a12; --highlight: #4a4520; --on-highlight: #f6eb8a;
+    --brand: #79b98f; --on-brand: #0e1a12; --highlight: #4a4520; --on-highlight: #f6eb8a; --bezel: #3b443e;
     --shadow: none; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #111513; --surface: #181d1a; --surface-2: #1f2521; --line: #2c3430;
   --fg: #e6ece8; --muted: #95a39b; --ok: #4cc27f; --warn: #e3a33b; --bad: #f0766c; --info: #79a6ef;
-  --brand: #79b98f; --on-brand: #0e1a12; --highlight: #4a4520; --on-highlight: #f6eb8a;
+  --brand: #79b98f; --on-brand: #0e1a12; --highlight: #4a4520; --on-highlight: #f6eb8a; --bezel: #3b443e;
   --shadow: none; color-scheme: dark;
 }
 
@@ -133,11 +136,11 @@ p { margin: 0; }
 .preview input[type="text"] { width: 120px; padding: 3px 8px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--bg) 35%, transparent); background: transparent; }
 
 /* ---------- shell ---------- */
-.shell { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: calc(100% - 44px); }
+.shell { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: var(--vh); }
 .nav {
   background: var(--surface); border-right: 1px solid var(--line);
   padding: 16px 12px; display: flex; flex-direction: column; gap: 4px;
-  position: sticky; top: 44px; height: calc(100vh - 44px); align-self: start;
+  position: sticky; top: var(--top); height: var(--vh); align-self: start;
 }
 .brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 16px; }
 .logo {
@@ -350,7 +353,7 @@ tbody tr:hover td { background: var(--surface-2); }
 .history div { display: flex; justify-content: space-between; gap: 8px; }
 
 /* sign in */
-.signin { min-height: calc(100vh - 44px); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.signin { min-height: var(--vh); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .signin .side { background: var(--brand); color: var(--on-brand); padding: 48px; display: flex; flex-direction: column; justify-content: space-between; gap: 24px; }
 .signin .side h1 { font-size: 2.2rem; max-width: 14ch; }
 .signin .side p { opacity: .85; max-width: 38ch; }
@@ -383,13 +386,13 @@ tbody tr:hover td { background: var(--surface-2); }
 :root[data-style="soft"] .btn { border-radius: 999px; padding: 9px 16px; }
 :root[data-style="soft"] .kpi .v { font-size: 2.3rem; }
 
-@media (max-width: 980px) {
+@container app (max-width: 980px) {
   .cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cols-main, .cols-2, .cols-3 { grid-template-columns: minmax(0, 1fr); }
   .row { grid-template-columns: 4px 80px minmax(0, 1fr) 110px 110px; }
   .row .who { display: none; }
 }
-@media (max-width: 720px) {
+@container app (max-width: 720px) {
   .shell { grid-template-columns: minmax(0, 1fr); }
   .nav { display: none; }
   .mobile-only { display: flex; }
@@ -414,8 +417,36 @@ tbody tr:hover td { background: var(--surface-2); }
   .signin .side { padding: 28px max(16px, env(safe-area-inset-right, 0px)) 28px max(16px, env(safe-area-inset-left, 0px)); }
   .signin .side h1 { font-size: 1.6rem; }
   .signin .side .hide-sm { display: none; }
-  .preview input[type="text"] { width: 96px; }
 }
+.app-root { container: app / inline-size; min-height: 100%; }
+@media (max-width: 720px) { .preview input[type="text"] { width: 96px; } }
+
+/* side-by-side device frames: each .device is a transform root, so the app's fixed bars, drawers and toasts stay inside it */
+.stage {
+  display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start; align-content: flex-start; justify-content: center;
+  background: var(--surface-2); min-height: calc(100vh - 44px);
+  padding-block: 24px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.stage figure { margin: 0; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.stage figcaption { font-size: .78rem; color: var(--muted); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.dev-desk { flex: 1 1 560px; max-width: 1280px; }
+.dev-phone { flex: 0 1 410px; }
+.desk-box { width: 100%; height: calc(800px * var(--s, .6)); }
+.phone-box { width: 100%; max-width: 410px; height: calc(820px * var(--ps, 1)); }
+.desk-box, .phone-box { min-height: 0; overflow: clip; overflow-clip-margin: 40px; }
+.device { position: relative; overflow: hidden; background: var(--bg); transform-origin: 0 0; }
+.device.desk { width: 1280px; height: 800px; transform: scale(var(--s, .6)); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 20px 50px -24px rgba(20, 30, 24, .35); }
+.device.phone { width: 410px; height: 820px; transform: scale(var(--ps, 1)); border: 10px solid var(--bezel); border-radius: 48px; box-shadow: 0 20px 50px -24px rgba(20, 30, 24, .35); }
+.device .chrome { height: 28px; display: flex; align-items: center; gap: 6px; padding: 0 12px; background: var(--surface-2); border-bottom: 1px solid var(--line); font-size: .72rem; color: var(--muted); }
+.device .chrome i { width: 9px; height: 9px; border-radius: 50%; background: var(--line); }
+.device .chrome span { margin: 0 auto; background: var(--surface); border-radius: 6px; padding: 1px 40px; }
+.device.phone .chrome { background: var(--surface); border: 0; justify-content: space-between; padding: 0 22px; font-weight: 600; color: var(--fg); }
+.device .scroller { position: absolute; inset: 28px 0 0 0; overflow-y: auto; overflow-x: hidden; }
+.device .app-root { --vh: 772px; --top: 0px; }
+.device.phone .scroller { scrollbar-width: none; }
+
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 
@@ -431,11 +462,21 @@ tbody tr:hover td { background: var(--surface-2); }
     <button data-role-btn="staff" aria-pressed="false">Staff</button>
     <button data-role-btn="signin" aria-pressed="false">Sign-in</button>
   </div>
+  <div class="seg" role="group" aria-label="Layout">
+    <button data-layout-btn="devices" aria-pressed="true">Desktop + phone</button>
+    <button data-layout-btn="full" aria-pressed="false">Full screen</button>
+  </div>
   <label for="brandColor">Brand <input type="color" id="brandColor" value="#3f7c56"></label>
   <label for="brandName" class="sr"><input type="text" id="brandName" value="IT Hub" aria-label="Company or app name"></label>
 </div>
 
-<div id="app"></div>
+<div id="full" class="app-root" hidden></div>
+<div id="devices" class="stage">
+  <figure class="dev-desk"><figcaption>Desktop · 1280 × 800</figcaption>
+    <div class="desk-box"><div class="device desk"><div class="chrome"><i></i><i></i><i></i><span>it.gardenersdream.co.uk</span></div><div class="scroller"><div class="app-root"></div></div></div></div></figure>
+  <figure class="dev-phone"><figcaption>Phone · 390 wide</figcaption>
+    <div class="phone-box"><div class="device phone"><div class="chrome"><span style="padding:0;background:none;margin:0">09:41</span><span style="padding:0;background:none;margin:0">5G ▮▮▮</span></div><div class="scroller"><div class="app-root"></div></div></div></div></figure>
+</div>
 
 <script>
 /* ---------------- icons ---------------- */
@@ -520,7 +561,7 @@ const prio = p => `<span class="prio p${p}">P${p}</span>`;
 
 function toast(msg) {
   const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
-  document.body.appendChild(t); setTimeout(() => t.remove(), 2200);
+  LAYER.appendChild(t); setTimeout(() => t.remove(), 2200);
 }
 
 /* ---------------- nav ---------------- */
@@ -540,7 +581,7 @@ function shell(content) {
       <div class="me"><div class="avatar">${initials(me[0])}</div><div><div style="font-weight:600">${me[0]}</div><div class="brand-sub">${me[1]}</div></div></div>
     </nav>
     <main id="main">${content}</main>
-    <nav class="tabbar" aria-label="Main">${items.map(([k, label, icon]) => `<a href="#${k}" data-go="${k}" ${S.page === k ? 'aria-current="page"' : ''}>${ic(icon)}<span>${label}</span></a>`).join('')}</nav>
+    <nav class="tabbar" aria-label="Main">${items.map(([k, label, icon]) => `<a href="#${k}" data-go="${k}" ${S.page === k ? 'aria-current="page"' : ''}>${ic(icon)}<span>${label === 'Dashboard' ? 'Home' : label}</span></a>`).join('')}</nav>
   </div>`;
 }
 
@@ -832,25 +873,45 @@ function signin() {
 
 /* ---------------- render + events ---------------- */
 function render() {
-  const app = $('#app');
-  if (S.role === 'signin') { app.innerHTML = signin(); return; }
+  let html;
+  if (S.role === 'signin') html = signin();
+  else {
   if (!NAV[S.role].some(([k]) => k === S.page)) S.page = NAV[S.role][0][0];
-  app.innerHTML = shell(pages[S.page]());
+  html = shell(pages[S.page]());
+  }
+  document.querySelectorAll('.app-root').forEach(r => { r.innerHTML = html; });
 }
 function setPressed(attr, val) { document.querySelectorAll(`[${attr}]`).forEach(b => b.setAttribute('aria-pressed', b.getAttribute(attr) === val)); }
 
+let LAYER = document.body;
+function toTop() { window.scrollTo(0, 0); document.querySelectorAll('.scroller').forEach(x => { x.scrollTop = 0; }); }
+function setLayout(l) {
+  S.layout = l; setPressed('data-layout-btn', l);
+  $('#full').hidden = l !== 'full'; $('#devices').hidden = l === 'full';
+  try { localStorage.setItem('ithub-layout', l); } catch (_) {}
+  fit();
+}
+function fit() {
+  const d = $('.desk-box'), p = $('.phone-box');
+  if (d.clientWidth) d.style.setProperty('--s', Math.min(1, d.clientWidth / 1280));
+  if (p.clientWidth) p.style.setProperty('--ps', Math.min(1, p.clientWidth / 410));
+}
+new ResizeObserver(fit).observe($('#devices'));
+
 document.addEventListener('click', e => {
+  LAYER = e.target.closest('.device') || document.body;
   const el = e.target.closest('button, a'); if (!el) {
     if (e.target.matches('.scrim')) e.target.remove();
     return;
   }
   const d = el.dataset;
+  if (d.layoutBtn) { setLayout(d.layoutBtn); return; }
   if (d.styleBtn) { document.documentElement.dataset.style = d.styleBtn; setPressed('data-style-btn', d.styleBtn); try { localStorage.setItem('ithub-style', d.styleBtn); } catch (_) {} return; }
-  if (d.roleBtn) { S.role = d.roleBtn; S.ticket = null; S.staffJob = null; setPressed('data-role-btn', d.roleBtn); render(); window.scrollTo(0, 0); return; }
-  if (d.go) { e.preventDefault(); S.page = d.go; S.ticket = null; S.staffJob = null; render(); window.scrollTo(0, 0); return; }
-  if (d.ticket) { S.page = 'tickets'; S.ticket = +d.ticket; render(); window.scrollTo(0, 0); return; }
+  if (d.roleBtn) { S.role = d.roleBtn; S.ticket = null; S.staffJob = null; setPressed('data-role-btn', d.roleBtn); render(); toTop(); return; }
+  if (d.go) { e.preventDefault(); S.page = d.go; S.ticket = null; S.staffJob = null; render(); toTop(); return; }
+  if (d.ticket) { S.page = 'tickets'; S.ticket = +d.ticket; render(); toTop(); return; }
   if (el.hasAttribute('data-back')) { S.ticket = null; render(); return; }
-  if (d.staffjob) { S.staffJob = +d.staffjob; render(); window.scrollTo(0, 0); return; }
+  if (d.staffjob) { S.staffJob = +d.staffjob; render(); toTop(); return; }
   if (el.hasAttribute('data-sback')) { S.staffJob = null; render(); return; }
   if (d.tf) { S.tFilter = d.tf; render(); return; }
   if (d.inv) { S.invTab = d.inv; render(); return; }
@@ -858,13 +919,13 @@ document.addEventListener('click', e => {
   if (d.as) { S.signinAs = d.as; render(); return; }
   if (el.hasAttribute('data-signin')) { S.role = S.signinAs; setPressed('data-role-btn', S.role); render(); toast('Signed in as ' + (S.role === 'tech' ? 'IT team' : 'staff')); return; }
   if (el.hasAttribute('data-toggle')) { el.setAttribute('aria-pressed', el.getAttribute('aria-pressed') !== 'true'); return; }
-  if (d.asset) { document.body.insertAdjacentHTML('beforeend', assetDrawer(ASSETS.find(a => a.id === d.asset))); return; }
+  if (d.asset) { LAYER.insertAdjacentHTML('beforeend', assetDrawer(ASSETS.find(a => a.id === d.asset))); return; }
   if (el.hasAttribute('data-close')) { el.closest('.scrim')?.remove(); return; }
   if (el.hasAttribute('data-scan')) {
-    document.body.insertAdjacentHTML('beforeend', `<div class="scrim center" data-close><div class="modal" role="dialog" aria-label="Scan asset"><h2>Scan an asset label</h2><div class="scanner"><div class="frame"></div><div class="line"></div></div><p class="muted" style="font-size:.82rem">Point the camera at the QR label. In the real app this opens the item straight away.</p><div class="actions"><button class="btn" data-close>Cancel</button><button class="btn primary" data-scanhit>Simulate a scan</button></div></div></div>`);
+    LAYER.insertAdjacentHTML('beforeend', `<div class="scrim center" data-close><div class="modal" role="dialog" aria-label="Scan asset"><h2>Scan an asset label</h2><div class="scanner"><div class="frame"></div><div class="line"></div></div><p class="muted" style="font-size:.82rem">Point the camera at the QR label. In the real app this opens the item straight away.</p><div class="actions"><button class="btn" data-close>Cancel</button><button class="btn primary" data-scanhit>Simulate a scan</button></div></div></div>`);
     return;
   }
-  if (el.hasAttribute('data-scanhit')) { el.closest('.scrim').remove(); S.page = 'inventory'; render(); document.body.insertAdjacentHTML('beforeend', assetDrawer(ASSETS[3])); return; }
+  if (el.hasAttribute('data-scanhit')) { el.closest('.scrim').remove(); S.page = 'inventory'; render(); LAYER.insertAdjacentHTML('beforeend', assetDrawer(ASSETS[3])); return; }
   if (d.copy) {
     const txt = d.copy;
     const done = () => toast('Copied ' + txt);
@@ -875,6 +936,7 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('submit', e => {
   e.preventDefault();
+  LAYER = e.target.closest('.device') || document.body;
   if (e.target.id === 'raiseForm') { toast('Sent to IT as IT-1049'); S.page = 'myjobs'; render(); }
   if (e.target.id === 'signinForm') { S.role = S.signinAs; setPressed('data-role-btn', S.role); render(); }
 });
@@ -886,4 +948,6 @@ const h = location.hash.slice(1);
 if (NAV.tech.some(([k]) => k === h)) S.page = h;
 if (NAV.staff.some(([k]) => k === h)) { S.role = 'staff'; S.page = h; setPressed('data-role-btn', 'staff'); }
 render();
+let lay = 'devices'; try { lay = localStorage.getItem('ithub-layout') || 'devices'; } catch (_) {}
+setLayout(lay);
 </script>
