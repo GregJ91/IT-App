@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clock, clockLabel, dueDates, formatDuration, formatMinutes, headlineClock } from "@/lib/sla";
+import { byAttention, clock, clockLabel, dueDates, formatDuration, formatMinutes, headlineClock } from "@/lib/sla";
 
 const t0 = new Date("2026-10-28T09:00:00Z");
 const at = (min: number) => new Date(t0.getTime() + min * 60000);
@@ -60,5 +60,50 @@ describe("headlineClock", () => {
   });
   it("always shows an overdue resolve clock", () => {
     expect(headlineClock(base, at(300)).dueAt).toEqual(at(240));
+  });
+});
+
+describe("byAttention", () => {
+  const now = at(1000);
+  // Each job: priority and how many minutes until (negative = since) its deadline.
+  const job = (id: string, priority: number, dueIn: number, responded = true) => ({
+    id,
+    priority,
+    createdAt: at(0),
+    responseDueAt: at(1000 + dueIn),
+    resolveDueAt: at(1000 + dueIn),
+    firstResponseAt: responded ? at(10) : null,
+    resolvedAt: null,
+  });
+
+  it("puts overdue Critical and High jobs first, then other overdue jobs, then the rest by deadline", () => {
+    const list = [
+      job("monitor-P3-overdue-16h", 3, -960),
+      job("wifi-P2-overdue-2h", 2, -120),
+      job("labels-P1-overdue-25m", 1, -25),
+      job("sage-P2-due-10m", 2, 10),
+      job("teams-P3-due-3h", 3, 228),
+      job("toner-P4-overdue-5m", 4, -5),
+      job("starter-P3-due-1d", 3, 1440),
+    ];
+    expect(byAttention(list, now).map((j) => j.id)).toEqual([
+      "labels-P1-overdue-25m",
+      "wifi-P2-overdue-2h",
+      "monitor-P3-overdue-16h",
+      "toner-P4-overdue-5m",
+      "sage-P2-due-10m",
+      "teams-P3-due-3h",
+      "starter-P3-due-1d",
+    ]);
+  });
+
+  it("puts the most overdue first within the same priority", () => {
+    const list = [job("a", 1, -5), job("b", 1, -60)];
+    expect(byAttention(list, now).map((j) => j.id)).toEqual(["b", "a"]);
+  });
+
+  it("uses the response deadline for jobs nobody has answered yet", () => {
+    const unanswered = { ...job("unanswered", 2, 500, false), responseDueAt: at(990) };
+    expect(byAttention([job("other", 2, 100), unanswered], now)[0].id).toBe("unanswered");
   });
 });

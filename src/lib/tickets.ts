@@ -3,7 +3,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { db, schema } from "@/db";
 import { pickAssignee } from "./assignment";
 import { isITRole, type Actor } from "./roles";
-import { dueDates } from "./sla";
+import { byAttention, dueDates } from "./sla";
 import * as alerts from "./ticket-alerts";
 import { saveUpload } from "./storage";
 import { OPEN_STATUSES, type Status } from "./tickets-shared";
@@ -414,14 +414,7 @@ export async function dashboard(userId: string, now = new Date()) {
     .from(ticket)
     .where(ne(ticket.status, "new"));
 
-  // Attention list: overdue first, then by due time.
-  const attention = [...open]
-    .sort((a, b) => {
-      const da = a.firstResponseAt ? a.resolveDueAt : a.responseDueAt;
-      const dbb = b.firstResponseAt ? b.resolveDueAt : b.responseDueAt;
-      return da.getTime() - dbb.getTime();
-    })
-    .slice(0, 6);
+  const attention = byAttention(open, now).slice(0, 6);
 
   return { open, breaching, unassigned, mine, attention, perDay: days.rows, rating };
 }

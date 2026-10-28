@@ -80,3 +80,22 @@ export function formatMinutes(min: number) {
   if (min % 60 === 0) return `${min / 60} hour${min === 60 ? "" : "s"}`;
   return `${min} min`;
 }
+
+type Rankable = Parameters<typeof headlineClock>[0] & { priority: number };
+
+/**
+ * Order for the dashboard's "Needs attention" list:
+ * 1. overdue Critical and High jobs (P1 before P2, then most overdue first)
+ * 2. other overdue jobs (same order)
+ * 3. everything else by deadline, soonest first.
+ */
+export function byAttention<T extends Rankable>(list: T[], now = new Date()) {
+  const keyed = list.map((t) => {
+    const c = headlineClock(t, now);
+    const late = c.state === "late";
+    const tier = late && t.priority <= 2 ? 0 : late ? 1 : 2;
+    return { t, tier, due: c.dueAt.getTime() };
+  });
+  keyed.sort((a, b) => a.tier - b.tier || (a.tier < 2 ? a.t.priority - b.t.priority : 0) || a.due - b.due);
+  return keyed.map((k) => k.t);
+}
