@@ -1,0 +1,194 @@
+import { asc, desc, inArray } from "drizzle-orm";
+import { db, schema } from "@/db";
+import { inviteStatus, listInvites } from "@/lib/invites";
+import { requireAdmin } from "@/lib/session";
+import { formatMinutes } from "@/lib/sla";
+import { getLookups } from "@/lib/tickets";
+import { addRule, archiveListItem, cancelInvite, deleteRule, moveRule } from "./actions";
+import { InviteForm, ListEditor, NewLinkButton, RoleSelect, SlaForm } from "./forms";
+
+export const metadata = { title: "Settings" };
+
+const dateFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" });
+
+export default async function Settings() {
+  const me = await requireAdmin();
+  const [lookups, rules, invites, team, staffCount] = await Promise.all([
+    getLookups(),
+    db.select().from(schema.assignmentRule).orderBy(asc(schema.assignmentRule.position), asc(schema.assignmentRule.id)),
+    listInvites(),
+    db
+      .select({ id: schema.user.id, name: schema.user.name, email: schema.user.email, role: schema.user.role, twoFactorEnabled: schema.user.twoFactorEnabled })
+      .from(schema.user)
+      .where(inArray(schema.user.role, ["tech", "admin"]))
+      .orderBy(desc(schema.user.role), asc(schema.user.name)),
+    db.$count(schema.user, inArray(schema.user.role, ["staff"])),
+  ]);
+  const pending = invites.filter((i) => inviteStatus(i) === "pending");
+  const siteName = new Map(lookups.sites.map((s) => [s.id, s.name]));
+  const catName = new Map(lookups.categories.map((c) => [c.id, c.name]));
+  const techName = new Map(lookups.itUsers.map((u) => [u.id, u.name]));
+
+  return (
+    <div className="page">
+      <div className="page-head">
+        <div>
+          <h1>Settings</h1>
+          <p className="sub">Who gets which job, SLA targets, places and the IT team</p>
+        </div>
+      </div>
+
+      <div className="grid cols-2" style={{ alignItems: "start" }}>
+        <section className="panel">
+          <div className="panel-head">
+            <h2>IT team</h2>
+          </div>
+          <div className="panel-body stack" style={{ gap: 14 }}>
+            <div>
+              {team.map((u) => (
+                <div className="setting" key={u.id}>
+                  <span>
+                    <strong>{u.name}</strong>
+                    <span className="muted"> · {u.email}</span>
+                    {!u.twoFactorEnabled && <span className="chip s-waiting" style={{ marginLeft: 6 }}>Setup not finished</span>}
+                  </span>
+                  <RoleSelect userId={u.id} role={u.role} self={u.id === me.id} />
+                </div>
+              ))}
+            </div>
+            {pending.length > 0 && (
+              <div>
+                <span className="label">Waiting to accept</span>
+                {pending.map((i) => (
+                  <div className="setting" key={i.id}>
+                    <span>
+                      <strong>{i.name}</strong> · {i.role === "admin" ? "IT admin" : "IT tech"}
+                      <br />
+                      <span className="muted" style={{ fontSize: ".8rem" }}>
+                        {i.email} · link expires {dateFmt.format(i.expiresAt)}
+                      </span>
+                    </span>
+                    <span className="actions">
+                      <NewLinkButton id={i.id} />
+                      <form action={cancelInvite}>
+                        <input type="hidden" name="id" value={i.id} />
+                        <button className="btn small danger">Cancel</button>
+                      </form>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <InviteForm />
+            <p className="note">
+              Staff ({staffCount}) sign in with their work email and only see their own jobs. IT tech can work tickets. IT admin can also change
+              settings and invite people. Invite links work once and expire after 7 days.
+            </p>
+          </div>
+        </section>
+
+        <section className="panel">
+          <div className="panel-head">
+            <h2>SLA targets</h2>
+            <span className="muted" style={{ fontSize: ".78rem" }}>Clock time, 24/7</span>
+          </div>
+          <SlaForm policies={lookups.policies} />
+          <div className="panel-body" style={{ paddingTop: 0 }}>
+            <p className="note">
+              Now: {lookups.policies.map((p) => `P${p.priority} respond ${formatMinutes(p.responseMinutes)}, fix ${formatMinutes(p.resolveMinutes)}`).join(" · ")}
+            </p>
+          </div>
+        </section>
+      </div>
+
+      <section className="panel">
+        <div className="panel-head">
+          <h2>Assignment rules</h2>
+          <span className="muted" style={{ fontSize: ".78rem" }}>Checked top to bottom. The first match picks who gets a new job.</span>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Order</th>
+                <th>Category</th>
+                <th>Site</th>
+                <th>Assign to</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {rules.map((r, i) => (
+                <tr key={r.id}>
+                  <td className="num">
+                    <span className="actions" style={{ flexWrap: "nowrap" }}>
+                      {i + 1}
+                      <form action={moveRule}>
+                        <input type="hidden" name="id" value={r.id} />
+                        <input type="hidden" name="dir" value="up" />
+                        <button className="btn small" disabled={i === 0} aria-label="Move up">↑</button>
+                      </form>
+                      <form action={moveRule}>
+                        <input type="hidden" name="id" value={r.id} />
+                        <input type="hidden" name="dir" value="down" />
+                        <button className="btn small" disabled={i === rules.length - 1} aria-label="Move down">↓</button>
+                      </form>
+                    </span>
+                  </td>
+                  <td>{r.categoryId ? (catName.get(r.categoryId) ?? "Archived category") : "Any"}</td>
+                  <td>{r.siteId ? (siteName.get(r.siteId) ?? "Archived site") : "Any"}</td>
+                  <td>{r.assigneeId ? (techName.get(r.assigneeId) ?? <span className="muted">No longer in IT</span>) : <span className="muted">Leave unassigned</span>}</td>
+                  <td>
+                    <form action={deleteRule}>
+                      <input type="hidden" name="id" value={r.id} />
+                      <button className="btn small danger">Remove</button>
+                    </form>
+                  </td>
+                </tr>
+              ))}
+              {rules.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="muted">
+                    No rules yet, so every new job starts unassigned. Add your table below.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <form action={addRule} className="toolbar" style={{ borderTop: "1px solid var(--line)", borderBottom: 0 }}>
+          <select className="filter" name="categoryId" aria-label="Category">
+            <option value="">Any category</option>
+            {lookups.categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <select className="filter" name="siteId" aria-label="Site">
+            <option value="">Any site</option>
+            {lookups.sites.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+          <select className="filter" name="assigneeId" aria-label="Assign to">
+            <option value="">Leave unassigned</option>
+            {lookups.itUsers.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name}
+              </option>
+            ))}
+          </select>
+          <button className="btn primary">Add rule</button>
+        </form>
+      </section>
+
+      <div className="grid cols-2" style={{ alignItems: "start" }}>
+        <ListEditor kind="site" title="Sites" items={lookups.sites} archive={archiveListItem} />
+        <ListEditor kind="category" title="Categories" items={lookups.categories} archive={archiveListItem} />
+      </div>
+    </div>
+  );
+}
