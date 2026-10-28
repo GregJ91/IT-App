@@ -9,6 +9,10 @@ import type { Actor, Role } from "../src/lib/roles";
 import { dueDates } from "../src/lib/sla";
 import { recomputeOpenTickets } from "../src/lib/sla-rules";
 import { addMessage, createTicket, logTime, rateTicket, updateTicket } from "../src/lib/tickets";
+import { checkOut, createAsset, type AssetInput } from "../src/lib/assets";
+import { saveLicence } from "../src/lib/licences";
+import { addDays, ukToday } from "../src/lib/reminders";
+import { createStockItem, moveStock } from "../src/lib/stock";
 
 if (/ithub$/.test(process.env.DATABASE_URL ?? "") && !process.argv.includes("--yes")) {
   console.error("This looks like the main database. Point DATABASE_URL at a demo database, or pass --yes.");
@@ -147,6 +151,53 @@ await at(27 * 60, starter, () => updateTicket(starter, sam, { status: "progress"
 await job(josh, 20 * 60, { title: "Second monitor flickering", description: "The left-hand monitor flickers when I move the mouse quickly.", priority: 3, cat: "Hardware", site: "Head Office", location: "Marketing, desk 9" });
 await job(dave, 70, { title: "Toner low on the dispatch laser printer", description: "Printer says toner low. We're on the last spare.", priority: 4, cat: "Printer", site: "Warehouse", location: "Dispatch" });
 await job(priya, 12, { title: "Teams camera not working", description: "Camera shows a black square in Teams calls. Fine in the Camera app.", priority: 3, cat: "Software", site: "Head Office", location: "Meeting room 2" });
+
+// Inventory: kit, cupboard stock and licences.
+const types = Object.fromEntries((await db.select().from(schema.assetType)).map((t) => [t.name, t.id]));
+const today = ukToday();
+const kit = (name: string, type: string, o: Partial<AssetInput>): AssetInput => ({
+  name,
+  typeId: types[type] ?? null,
+  make: "",
+  model: "",
+  serial: "",
+  status: "in_use",
+  siteId: null,
+  location: "",
+  ipAddress: "",
+  macAddress: "",
+  purchaseDate: null,
+  purchaseCostPence: null,
+  supplier: "",
+  warrantyUntil: null,
+  notes: "",
+  ...o,
+});
+const dell = await createAsset(greg, kit("Dell Latitude 5440", "Laptop", { make: "Dell", model: "Latitude 5440", serial: "J7H2XK3", siteId: sites["Head Office"], location: "Accounts", purchaseDate: "2024-03-14", purchaseCostPence: 84900, supplier: "Dell", warrantyUntil: "2027-03-14" }));
+await checkOut(greg, dell.id, { userId: mark.id, name: "" }, "with charger and dock");
+await createAsset(greg, kit("Lenovo ThinkPad E14", "Laptop", { make: "Lenovo", model: "ThinkPad E14", serial: "PF4KQ21", status: "spare", siteId: sites["Head Office"], location: "IT cupboard", purchaseDate: "2023-11-02", purchaseCostPence: 62900, supplier: "Insight", warrantyUntil: addDays(today, 9) }));
+const m507 = await createAsset(greg, kit("Dispatch laser", "Printer", { make: "HP", model: "LaserJet M507", serial: "PHBQ71830", siteId: sites.Warehouse, location: "Dispatch", ipAddress: "10.20.1.31", macAddress: "3C:52:82:1A:7F:04", purchaseDate: "2024-06-30", purchaseCostPence: 41250, supplier: "Insight", warrantyUntil: "2027-06-30" }));
+await checkOut(greg, m507.id, { userId: null, name: "Dispatch" });
+const zebra = await createAsset(greg, kit("Dispatch bench 2 labels", "Label printer", { make: "Zebra", model: "ZD421", serial: "D4J212905", status: "repair", siteId: sites.Warehouse, location: "Dispatch bench 2", ipAddress: "10.20.1.45", macAddress: "00:07:4D:9E:12:B3", warrantyUntil: "2027-01-11" }));
+await createAsset(greg, kit("Accounts MFP", "Printer", { make: "Ricoh", model: "IM C3010", siteId: sites["Head Office"], location: "Accounts", ipAddress: "10.10.1.20", macAddress: "00:26:73:5C:01:9F", supplier: "Ricoh (lease)" }));
+await createAsset(greg, kit("Reception printer", "Printer", { make: "Brother", model: "HL-L5210DN", siteId: sites["Head Office"], location: "Reception", ipAddress: "10.10.1.22", macAddress: "3C:2A:F4:88:20:6E" }));
+await createAsset(greg, kit("Goods-in scanner", "Scanner", { make: "Fujitsu", model: "fi-8170", serial: "A21C00418", siteId: sites.Warehouse, location: "Goods in", ipAddress: "10.20.1.60", warrantyUntil: "2027-05-05" }));
+const pi = await createAsset(greg, kit("Showroom wall display", "Raspberry Pi", { make: "Raspberry Pi", model: "Pi 5 8GB", serial: "b8:27:eb:4c:91:0a", siteId: sites.Showroom, location: "Front window", ipAddress: "10.30.1.50" }));
+await checkOut(greg, pi.id, { userId: null, name: "Showroom TV" });
+await updateTicket(labels, greg, { assetId: zebra.id });
+
+const shelf = (name: string, category: string, qty: number, min: number, location: string, fits = "", site = "Warehouse") =>
+  createStockItem(greg, { name, category, siteId: sites[site] ?? null, location, minQuantity: min, supplier: category === "Toner" ? "Insight" : "Amazon", fits, notes: "" }, qty);
+const toner = await shelf("HP 59A toner", "Toner", 2, 2, "Cupboard B, shelf 2", "HP LaserJet M507");
+await moveStock(greg, toner.id, { delta: -1, reason: "taken" }, "", labels);
+await shelf("Zebra 102 × 152 mm labels", "Labels", 14, 10, "Cupboard B, shelf 1", "Zebra ZD421");
+await shelf("Logitech MK295 keyboard and mouse", "Peripherals", 2, 3, "IT cupboard", "", "Head Office");
+await shelf("Dell P2425H 24\" monitor", "Screens", 4, 2, "IT cupboard", "", "Head Office");
+await shelf("USB-C to HDMI adapter", "Cables", 6, 2, "IT cupboard", "", "Head Office");
+
+await saveLicence(greg, null, { name: "Microsoft 365 Business Standard", supplier: "Microsoft", seats: 48, renewsOn: addDays(today, 20), costPence: 488600, notes: "" });
+await saveLicence(greg, null, { name: "Sage 50 Accounts", supplier: "Sage", seats: 3, renewsOn: addDays(today, 140), costPence: 114000, notes: "" });
+await saveLicence(greg, null, { name: "gardenersdream.co.uk domain", supplier: "123-reg", seats: null, renewsOn: addDays(today, 61), costPence: 1499, notes: "" });
 
 // Dates were moved back above, so work the deadlines out again from the history.
 await recomputeOpenTickets();

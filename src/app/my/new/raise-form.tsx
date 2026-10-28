@@ -6,14 +6,26 @@ import { PRIORITY_HELP } from "@/lib/tickets-shared";
 
 type Opt = { id: number; name: string };
 
-export function RaiseForm(props: { sites: Opt[]; categories: Opt[]; policies: { priority: number; label: string }[]; phone: string }) {
+type About = { tag: string; name: string; siteId: number | null; location: string; categoryId: number | null };
+
+export function RaiseForm(props: { sites: Opt[]; categories: Opt[]; policies: { priority: number; label: string }[]; phone: string; about?: About }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(raiseTicket, undefined);
+  const about = props.about;
   return (
     <form action={action} className="panel panel-body form">
       {state?.error && <p className="error">{state.error}</p>}
+      {about && (
+        <>
+          <input type="hidden" name="assetTag" value={about.tag} />
+          <p className="note">
+            About <strong className="mono">{about.tag}</strong> {about.name}
+            {about.location && ` (${about.location})`}
+          </p>
+        </>
+      )}
       <div className="field">
         <label htmlFor="f-title">What&apos;s the problem?</label>
-        <input className="input" id="f-title" name="title" required maxLength={160} placeholder="e.g. Label printer printing blank labels" />
+        <input className="input" id="f-title" name="title" required maxLength={160} placeholder={about ? `What's wrong with the ${about.name}?` : "e.g. Label printer printing blank labels"} />
       </div>
       <div className="field">
         <label htmlFor="f-desc">Details</label>
@@ -26,7 +38,7 @@ export function RaiseForm(props: { sites: Opt[]; categories: Opt[]; policies: { 
       <div className="two">
         <div className="field">
           <label htmlFor="f-site">Site</label>
-          <select id="f-site" name="siteId" defaultValue="">
+          <select id="f-site" name="siteId" defaultValue={about?.siteId ?? ""}>
             <option value="">Choose a site</option>
             {props.sites.map((s) => (
               <option key={s.id} value={s.id}>
@@ -37,12 +49,12 @@ export function RaiseForm(props: { sites: Opt[]; categories: Opt[]; policies: { 
         </div>
         <div className="field">
           <label htmlFor="f-loc">Where exactly?</label>
-          <input className="input" id="f-loc" name="location" maxLength={200} placeholder="e.g. Dispatch bench 2" />
+          <input className="input" id="f-loc" name="location" maxLength={200} defaultValue={about?.location} placeholder="e.g. Dispatch bench 2" />
         </div>
       </div>
       <div className="field">
         <label htmlFor="f-cat">What&apos;s it about?</label>
-        <select id="f-cat" name="categoryId" defaultValue="">
+        <select id="f-cat" name="categoryId" defaultValue={about?.categoryId ?? ""}>
           <option value="">Not sure</option>
           {props.categories.map((c) => (
             <option key={c.id} value={c.id}>

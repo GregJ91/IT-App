@@ -1,6 +1,8 @@
 import { sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   boolean,
+  date,
   index,
   integer,
   jsonb,
@@ -192,6 +194,8 @@ export const ticket = pgTable(
     slackTs: text("slack_ts"),
     // Set while the fix clock is paused (waiting on the requester).
     slaPausedAt: timestamp("sla_paused_at", { withTimezone: true }),
+    // The piece of kit this job is about, if any.
+    assetId: integer("asset_id").references((): AnyPgColumn => asset.id, { onDelete: "set null" }),
   },
   (t) => [
     index("ticket_status_idx").on(t.status),
@@ -261,3 +265,133 @@ export const ticketEvent = pgTable(
   (t) => [index("ticket_event_ticket_idx").on(t.ticketId)],
 );
 
+
+/* ---------- Phase 2: inventory ---------- */
+
+// Kinds of kit: Laptop, Printer, Raspberry Pi… "printer" types appear on the Printers page.
+export const assetType = pgTable("asset_type", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  isPrinter: boolean("is_printer").notNull().default(false),
+  position: integer("position").notNull().default(0),
+  archived: boolean("archived").notNull().default(false),
+});
+
+export const asset = pgTable(
+  "asset",
+  {
+    id: serial("id").primaryKey(),
+    // The label on the kit, e.g. GD-00042. Never reused.
+    tag: text("tag").notNull().unique(),
+    name: text("name").notNull(),
+    typeId: integer("type_id").references(() => assetType.id, { onDelete: "set null" }),
+    make: text("make").notNull().default(""),
+    model: text("model").notNull().default(""),
+    serial: text("serial").notNull().default(""),
+    // "in_use" | "spare" | "repair" | "retired"
+    status: text("status").notNull().default("spare"),
+    siteId: integer("site_id").references(() => site.id, { onDelete: "set null" }),
+    location: text("location").notNull().default(""),
+    // Who or what has it: a person with an account, or a place/team ("Dispatch", "Showroom TV").
+    assignedUserId: text("assigned_user_id").references(() => user.id, { onDelete: "set null" }),
+    assignedTo: text("assigned_to").notNull().default(""),
+    ipAddress: text("ip_address").notNull().default(""),
+    macAddress: text("mac_address").notNull().default(""),
+    purchaseDate: date("purchase_date", { mode: "string" }),
+    // Pence, to avoid rounding errors.
+    purchaseCostPence: integer("purchase_cost_pence"),
+    supplier: text("supplier").notNull().default(""),
+    warrantyUntil: date("warranty_until", { mode: "string" }),
+    notes: text("notes").notNull().default(""),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("asset_type_idx").on(t.typeId), index("asset_site_idx").on(t.siteId), index("asset_assigned_idx").on(t.assignedUserId)],
+);
+
+export const assetPhoto = pgTable(
+  "asset_photo",
+  {
+    id: serial("id").primaryKey(),
+    assetId: integer("asset_id")
+      .notNull()
+      .references(() => asset.id, { onDelete: "cascade" }),
+    uploadedById: text("uploaded_by_id").references(() => user.id, { onDelete: "set null" }),
+    filename: text("filename").notNull(),
+    mimeType: text("mime_type").notNull(),
+    size: integer("size").notNull(),
+    storageKey: text("storage_key").notNull().unique(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("asset_photo_asset_idx").on(t.assetId)],
+);
+
+// History: created, edited (with the fields), checked out/in, status, photo added, ticket linked.
+export const assetEvent = pgTable(
+  "asset_event",
+  {
+    id: serial("id").primaryKey(),
+    assetId: integer("asset_id")
+      .notNull()
+      .references(() => asset.id, { onDelete: "cascade" }),
+    actorId: text("actor_id").references(() => user.id, { onDelete: "set null" }),
+    type: text("type").notNull(),
+    data: jsonb("data").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("asset_event_asset_idx").on(t.assetId)],
+);
+
+// Cupboard stock counted by quantity: keyboards, mice, toner, labels, cables.
+export const stockItem = pgTable("stock_item", {
+  id: serial("id").primaryKey(),
+  // Short code for the shelf label, e.g. ST-0007.
+  code: text("code").notNull().unique(),
+  name: text("name").notNull(),
+  category: text("category").notNull().default(""),
+  siteId: integer("site_id").references(() => site.id, { onDelete: "set null" }),
+  location: text("location").notNull().default(""),
+  quantity: integer("quantity").notNull().default(0),
+  // Alert when quantity drops below this. 0 = never alert.
+  minQuantity: integer("min_quantity").notNull().default(0),
+  supplier: text("supplier").notNull().default(""),
+  // Free text, e.g. "HP LaserJet M507" for toner.
+  fits: text("fits").notNull().default(""),
+  notes: text("notes").notNull().default(""),
+  archived: boolean("archived").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const stockMovement = pgTable(
+  "stock_movement",
+  {
+    id: serial("id").primaryKey(),
+    itemId: integer("item_id")
+      .notNull()
+      .references(() => stockItem.id, { onDelete: "cascade" }),
+    // Negative when taken, positive when received.
+    delta: integer("delta").notNull(),
+    quantityAfter: integer("quantity_after").notNull(),
+    // "taken" | "received" | "counted"
+    reason: text("reason").notNull(),
+    note: text("note").notNull().default(""),
+    ticketId: integer("ticket_id").references(() => ticket.id, { onDelete: "set null" }),
+    userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("stock_movement_item_idx").on(t.itemId)],
+);
+
+export const licence = pgTable("licence", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  supplier: text("supplier").notNull().default(""),
+  seats: integer("seats"),
+  renewsOn: date("renews_on", { mode: "string" }),
+  costPence: integer("cost_pence"),
+  notes: text("notes").notNull().default(""),
+  archived: boolean("archived").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});

@@ -68,10 +68,15 @@ export async function slackUserId(email: string) {
   const key = email.toLowerCase();
   const hit = idCache.get(key);
   if (hit && Date.now() - hit.at < ID_TTL) return hit.id;
-  const res = await safely("users.lookupByEmail", () =>
-    call<{ user: { id: string } }>("users.lookupByEmail", { email: key }),
-  );
-  const id = res?.user.id ?? null;
+  let id: string | null = null;
+  try {
+    id = (await call<{ user: { id: string } }>("users.lookupByEmail", { email: key })).user.id;
+  } catch (err) {
+    // Someone not being in Slack is normal; anything else is worth logging.
+    if (!(err instanceof SlackApiError && err.message === "users_not_found")) {
+      console.error("[slack] users.lookupByEmail failed:", err instanceof Error ? err.message : err);
+    }
+  }
   idCache.set(key, { id, at: Date.now() });
   return id;
 }

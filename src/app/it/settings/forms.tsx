@@ -169,7 +169,7 @@ function RenameRow({ kind, id, name, archive }: { kind: string; id: number; name
   );
 }
 
-export function ListEditor(props: { kind: "site" | "category"; title: string; items: { id: number; name: string }[]; archive: (f: FormData) => Promise<void> }) {
+export function ListEditor(props: { kind: "site" | "category" | "type"; title: string; items: { id: number; name: string }[]; archive: (f: FormData) => Promise<void> }) {
   const [state, action, pending] = useActionState<SettingsState, FormData>(addListItem, undefined);
   const form = useRef<HTMLFormElement>(null);
   useEffect(() => {
@@ -188,7 +188,7 @@ export function ListEditor(props: { kind: "site" | "category"; title: string; it
         </div>
         <form ref={form} action={action} className="actions">
           <input type="hidden" name="kind" value={props.kind} />
-          <input className="input" name="name" placeholder={`Add a ${props.kind}`} aria-label={`New ${props.kind}`} style={{ flex: 1, minWidth: 0 }} />
+          <input className="input" name="name" placeholder={`Add a ${props.kind === "type" ? "kit type" : props.kind}`} aria-label={`New ${props.kind}`} style={{ flex: 1, minWidth: 0 }} />
           <button className="btn" disabled={pending}>
             Add
           </button>

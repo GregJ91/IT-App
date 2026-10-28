@@ -70,6 +70,7 @@ export type NewTicket = {
   siteId: number | null;
   location: string;
   contactPhone: string;
+  assetId?: number | null;
 };
 
 export async function createTicket(requester: Actor, input: NewTicket, files: File[]) {
@@ -87,6 +88,9 @@ export async function createTicket(requester: Actor, input: NewTicket, files: Fi
     data: assigneeId ? { assigneeId, byRule: true } : {},
   });
   await saveFiles(files, row.id, null, requester.id);
+  if (row.assetId) {
+    await db.insert(schema.assetEvent).values({ assetId: row.assetId, actorId: requester.id, type: "ticket", data: { ticketId: row.id, title: row.title } });
+  }
   // Remember the number for next time.
   if (input.contactPhone && input.contactPhone !== requester.phone) {
     await db.update(user).set({ phone: input.contactPhone }).where(eq(user.id, requester.id));
@@ -295,6 +299,7 @@ export type TicketPatch = {
   priority?: number;
   categoryId?: number | null;
   siteId?: number | null;
+  assetId?: number | null;
 };
 
 export async function updateTicket(id: number, actor: Actor, patch: TicketPatch) {
@@ -340,6 +345,16 @@ export async function updateTicket(id: number, actor: Actor, patch: TicketPatch)
   if (patch.siteId !== undefined && patch.siteId !== t.siteId) {
     set.siteId = patch.siteId;
     events.push({ type: "site", data: { from: t.siteId, to: patch.siteId } });
+  }
+  if (patch.assetId !== undefined && patch.assetId !== t.assetId) {
+    if (patch.assetId && !(await db.query.asset.findFirst({ where: eq(schema.asset.id, patch.assetId) }))) {
+      throw new TicketError("That item isn't in the inventory.");
+    }
+    set.assetId = patch.assetId;
+    events.push({ type: "asset", data: { from: t.assetId, to: patch.assetId } });
+    if (patch.assetId) {
+      await db.insert(schema.assetEvent).values({ assetId: patch.assetId, actorId: actor.id, type: "ticket", data: { ticketId: id, title: t.title } });
+    }
   }
   if (events.length === 0) return t;
 

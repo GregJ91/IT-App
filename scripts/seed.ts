@@ -26,6 +26,13 @@ await db
   .onConflictDoNothing();
 await db.insert(schema.slaPolicy).values(SLA).onConflictDoNothing();
 
+// Kinds of kit. Printers, label printers and scanners show on the Printers page.
+const KIT = ["Laptop", "Desktop", "Monitor", "Printer", "Label printer", "Scanner", "Raspberry Pi", "Phone", "Tablet", "Network", "Other"];
+await db
+  .insert(schema.assetType)
+  .values(KIT.map((name, position) => ({ name, position, isPrinter: /print|scan/i.test(name) })))
+  .onConflictDoNothing();
+
 // Working hours: 5am to 9pm, every day (UK time). Only set the first time.
 const hadHours = await db.query.appSetting.findFirst({ where: sql`${schema.appSetting.key} = 'workingHours'` });
 if (!hadHours) {

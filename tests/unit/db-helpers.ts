@@ -4,7 +4,7 @@ import { db, schema } from "@/db";
 import type { Actor, Role } from "@/lib/roles";
 
 export async function resetData() {
-  await db.execute(sql`truncate table ticket_event, time_entry, attachment, ticket_message, ticket, assignment_rule, invite, app_setting, session_check, session, account, two_factor, "user", site, category, sla_policy restart identity cascade`);
+  await db.execute(sql`truncate table ticket_event, time_entry, attachment, ticket_message, stock_movement, stock_item, licence, asset_event, asset_photo, asset, asset_type, ticket, assignment_rule, invite, app_setting, session_check, session, account, two_factor, "user", site, category, sla_policy restart identity cascade`);
   await db.insert(schema.slaPolicy).values([
     { priority: 1, label: "Critical", responseMinutes: 15, resolveMinutes: 240 },
     { priority: 2, label: "High", responseMinutes: 60, resolveMinutes: 1440 },
@@ -13,7 +13,11 @@ export async function resetData() {
   ]);
   const sites = await db.insert(schema.site).values([{ name: "Head Office" }, { name: "Warehouse" }]).returning();
   const cats = await db.insert(schema.category).values([{ name: "Printer" }, { name: "Network" }]).returning();
-  return { sites, cats };
+  const types = await db
+    .insert(schema.assetType)
+    .values([{ name: "Laptop" }, { name: "Printer", isPrinter: true }])
+    .returning();
+  return { sites, cats, types };
 }
 
 export async function makeUser(name: string, role: Role): Promise<Actor> {

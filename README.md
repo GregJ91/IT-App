@@ -31,6 +31,18 @@ A bespoke IT app for raising and handling IT jobs, managing inventory, keeping p
 - Installable on phones. Pages opened recently still open without signal; changes need a connection.
 - Screenshots are only served to the person who raised the job and the IT team.
 
+## What Phase 2 does (inventory and printers)
+
+- **Inventory** of tagged kit: laptops, desktops, printers, label printers, scanners, Raspberry Pis, monitors, phones and so on. Each item has a tag (GD-00001…), photos, make, model, serial, status (in use, spare, in repair, retired), site and location, IP and MAC address, purchase date, cost, supplier, warranty date and notes. Search by tag, name, serial, IP, person or place.
+- **Check out and check in** to a person or a place/team, with a full history of who had it and every change.
+- **QR labels** on A4 sheets (Avery L7160) or single labels (Brother QL 62 × 29 mm, Zebra 57 × 32 mm). Scanning one with any phone camera opens the item for IT; for anyone else it opens "Raise a job" already filled in for that item. There's also a Scan page in the app, and you can type a tag.
+- **Stock** for cupboard items counted by quantity (toner, labels, keyboards, screens, cables): −1 / +1 straight from the list, a big "Take one" button on each item's page (shelf labels open it), deliveries and stock counts, and a history. When something drops below its minimum, IT gets an email and a Slack message once.
+- **Printers page**: every printer and scanner with IP (click to open its web page on the office network), MAC, location, matching toner from stock and open jobs.
+- **Licences** with renewal dates, seats and cost.
+- **Reminders**: the dashboard shows low stock, licences renewing and warranties ending in the next 30 days. A daily summary goes to IT by email (and Slack) 14, 7 and 1 days before; it's sent on the first dashboard visit each day, or by a scheduler calling `/api/cron/reminders` with `CRON_SECRET`.
+- **Tickets link to kit**, so an item's page lists its jobs and a ticket shows which item it's about.
+- **Spreadsheet import** (CSV) for kit and stock, with a row-by-row check before anything is saved. Templates are on the import page.
+
 ## Placeholders to replace
 
 | What | Placeholder now | Where to change it |
@@ -42,6 +54,7 @@ A bespoke IT app for raising and handling IT jobs, managing inventory, keeping p
 | Categories | Hardware, Software, Network, Printer, Onboarding, Request, Other | Settings → Categories |
 | First IT admin | Whatever `ADMIN_EMAIL` is set to | `.env`, then `npm run db:seed` |
 | Logo | Low-res crop from a website screenshot | `public/brand/logo.png` |
+| Kit types | Laptop, Desktop, Monitor, Printer, Label printer, Scanner, Raspberry Pi, Phone, Tablet, Network, Other | Settings → Kit types |
 | Microsoft / Google / Slack sign-in | Off until keys are added | `.env` |
 | Email sending | Printed to the server log | `SMTP_*` in `.env` |
 | Slack | Off until a Slack app is connected | `SLACK_BOT_TOKEN` and `SLACK_CHANNEL` in `.env` ([setup steps](docs/slack-setup.md)) |
@@ -99,7 +112,7 @@ The end-to-end run walks through the whole story: an admin joins by invite and s
 
 0. **Design**: done (E · Ocean)
 1. **Tickets**: built and tested with placeholders, including Slack notifications. Raising jobs from Slack still to add.
-2. **Inventory + printers**: assets, stock, QR scanning, photos, printer register (optional SNMP live status)
+2. **Inventory + printers**: built and tested. Live printer status (SNMP) waits for hosting on the office network.
 3. **Networking**: UniFi integration per site
 4. **WhatsApp and extras**
 

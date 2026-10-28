@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { findAssetByTag } from "@/lib/assets";
 import { config } from "@/lib/config";
 import { isITRole, requireIT, requireUser } from "@/lib/session";
 import { UploadError } from "@/lib/storage";
@@ -38,9 +39,12 @@ export async function raiseTicket(_: ActionState, form: FormData): Promise<Actio
   const u = await requireUser();
   const parsed = NewTicket.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
+  // From a scanned QR label: link the job to that item.
+  const tag = String(form.get("assetTag") ?? "");
+  const assetId = tag ? ((await findAssetByTag(tag))?.id ?? null) : null;
   let id: number;
   try {
-    id = (await createTicket(u, parsed.data, files(form))).id;
+    id = (await createTicket(u, { ...parsed.data, assetId }, files(form))).id;
   } catch (e) {
     return failure(e);
   }
@@ -75,9 +79,11 @@ export async function changeTicket(form: FormData) {
   if (form.has("priority")) patch.priority = Number(form.get("priority"));
   if (form.has("categoryId")) patch.categoryId = Number(form.get("categoryId")) || null;
   if (form.has("siteId")) patch.siteId = Number(form.get("siteId")) || null;
+  if (form.has("assetId")) patch.assetId = Number(form.get("assetId")) || null;
   await updateTicket(id, u, patch);
   revalidatePath(`/it/tickets/${id}`);
   revalidatePath("/it", "layout");
+  if (patch.assetId) revalidatePath(`/it/assets/${patch.assetId}`);
 }
 
 export async function logTimeAction(_: ActionState, form: FormData): Promise<ActionState> {

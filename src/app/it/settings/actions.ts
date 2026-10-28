@@ -152,9 +152,9 @@ export async function saveWorkingHours(_: SettingsState, form: FormData): Promis
 
 /* ---------- sites and categories ---------- */
 
-const tables = { site: schema.site, category: schema.category } as const;
+const tables = { site: schema.site, category: schema.category, type: schema.assetType } as const;
 type Kind = keyof typeof tables;
-const kindOf = (v: FormDataEntryValue | null): Kind => (v === "category" ? "category" : "site");
+const kindOf = (v: FormDataEntryValue | null): Kind => (v === "category" ? "category" : v === "type" ? "type" : "site");
 
 export async function addListItem(_: SettingsState, form: FormData): Promise<SettingsState> {
   await requireAdmin();
@@ -171,7 +171,8 @@ export async function addListItem(_: SettingsState, form: FormData): Promise<Set
     return { error: `${name} is already on the list.` };
   }
   const [{ max }] = await db.select({ max: sql<number>`coalesce(max(${t.position}), 0)` }).from(t);
-  await db.insert(t).values({ name, position: Number(max) + 1 });
+  // New kit types with "print" or "scan" in the name show on the Printers page.
+  await db.insert(t).values({ name, position: Number(max) + 1, ...(t === schema.assetType ? { isPrinter: /print|scan/i.test(name) } : {}) });
   return done(`Added ${name}.`);
 }
 

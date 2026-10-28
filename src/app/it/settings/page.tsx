@@ -7,6 +7,7 @@ import { getLookups } from "@/lib/tickets";
 import { addRule, archiveListItem, cancelInvite, deleteRule, moveRule } from "./actions";
 import { InviteForm, ListEditor, NewLinkButton, RoleSelect, SlackTest, SlaForm, WorkingHoursForm } from "./forms";
 import { getSlaSettings } from "@/lib/sla-rules";
+import { assetTypes } from "@/lib/assets";
 import { slackChannelName, slackMode } from "@/lib/slack";
 
 export const metadata = { title: "Settings" };
@@ -27,6 +28,7 @@ export default async function Settings() {
     db.$count(schema.user, inArray(schema.user.role, ["staff"])),
     getSlaSettings(),
   ]);
+  const kitTypes = await assetTypes();
   const slack = slackMode();
   const pending = invites.filter((i) => inviteStatus(i) === "pending");
   const siteName = new Map(lookups.sites.map((s) => [s.id, s.name]));
@@ -243,7 +245,8 @@ export default async function Settings() {
 
       <div className="grid cols-2" style={{ alignItems: "start" }}>
         <ListEditor kind="site" title="Sites" items={lookups.sites} archive={archiveListItem} />
-        <ListEditor kind="category" title="Categories" items={lookups.categories} archive={archiveListItem} />
+        <ListEditor kind="category" title="Job categories" items={lookups.categories} archive={archiveListItem} />
+        <ListEditor kind="type" title="Kit types" items={kitTypes} archive={archiveListItem} />
       </div>
     </div>
   );

@@ -3,6 +3,8 @@ import { Icon } from "@/components/icons";
 import { TicketRow } from "@/components/ticket-row";
 import { requireIT } from "@/lib/session";
 import { dashboard } from "@/lib/tickets";
+import { after } from "next/server";
+import { comingUp, sendDailyReminders } from "@/lib/reminders";
 
 export const metadata = { title: "Dashboard" };
 
@@ -16,7 +18,9 @@ const dow = new Intl.DateTimeFormat("en-GB", { weekday: "narrow", timeZone: "UTC
 export default async function Dashboard() {
   const u = await requireIT();
   const now = new Date();
-  const d = await dashboard(u.id, now);
+  const [d, soon] = await Promise.all([dashboard(u.id, now), comingUp(now)]);
+  // The first IT visit of the day sends the daily reminders (after the page is sent).
+  after(() => sendDailyReminders().catch((e) => console.error("[reminders]", e)));
   const total = d.perDay.reduce((n, x) => n + x.n, 0);
   const max = Math.max(4, ...d.perDay.map((x) => x.n));
   return (
@@ -75,6 +79,40 @@ export default async function Dashboard() {
             <div className="empty">No open jobs. Nice.</div>
           )}
         </section>
+        <aside className="stack">
+        <section className="panel">
+          <div className="panel-head">
+            <h2>Coming up</h2>
+            <span className="muted" style={{ fontSize: ".78rem" }}>Next 30 days</span>
+          </div>
+          <div className="panel-body list">
+            {soon.lowStock.map((s) => (
+              <div key={`s${s.id}`}>
+                <Link href={`/it/stock/${s.id}`}>Low stock · {s.name}</Link>
+                <span className="t-late num">
+                  {s.quantity} of {s.minQuantity}
+                </span>
+              </div>
+            ))}
+            {soon.licences.map((l) => (
+              <div key={`l${l.id}`}>
+                <Link href="/it/licences">Licence · {l.name}</Link>
+                <span className={l.days < 0 ? "t-late" : l.days <= 7 ? "t-soon" : "muted"}>{l.days < 0 ? "Overdue" : l.days === 0 ? "Today" : `${l.days} days`}</span>
+              </div>
+            ))}
+            {soon.warranties.map((w) => (
+              <div key={`w${w.id}`}>
+                <Link href={`/it/assets/${w.id}`}>
+                  Warranty ends · {w.name} <span className="mono muted">{w.tag}</span>
+                </Link>
+                <span className={w.days <= 7 ? "t-soon" : "muted"}>{w.days === 0 ? "Today" : `${w.days} days`}</span>
+              </div>
+            ))}
+            {soon.lowStock.length + soon.licences.length + soon.warranties.length === 0 && (
+              <p className="muted">Nothing running low or expiring in the next 30 days.</p>
+            )}
+          </div>
+        </section>
         <section className="panel">
           <div className="panel-head">
             <h2>Jobs raised, last 14 days</h2>
@@ -98,6 +136,7 @@ export default async function Dashboard() {
             </p>
           </div>
         </section>
+        </aside>
       </div>
     </div>
   );

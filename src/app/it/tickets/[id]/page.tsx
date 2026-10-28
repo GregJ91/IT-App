@@ -9,6 +9,7 @@ import { Screenshots, Thread } from "@/components/thread";
 import { Prio, StatusChip, whenFull } from "@/components/ui";
 import { requireIT } from "@/lib/session";
 import { clockLabel, formatDuration, ticketClocks, type Clock } from "@/lib/sla";
+import { assetOptions } from "@/lib/assets";
 import { getLookups, getTicketForViewer } from "@/lib/tickets";
 import { STATUSES, STATUS_LABEL, ticketRef } from "@/lib/tickets-shared";
 import { TimeForm } from "./time-form";
@@ -37,7 +38,7 @@ function Timer({ label, c }: { label: string; c: Clock }) {
 export default async function TicketPage({ params }: { params: Promise<{ id: string }> }) {
   const u = await requireIT();
   const { id } = await params;
-  const [d, lookups] = await Promise.all([getTicketForViewer(Number(id), u), getLookups()]);
+  const [d, lookups, kit] = await Promise.all([getTicketForViewer(Number(id), u), getLookups(), assetOptions()]);
   if (!d) notFound();
   const t = d.ticket;
   const clocks = ticketClocks(t);
@@ -196,6 +197,22 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
                         </option>
                       ))}
                     </AutoSelect>
+                  </dd>
+                  <dt>Item</dt>
+                  <dd>
+                    <AutoSelect name="assetId" defaultValue={t.assetId ?? ""} label="Linked item">
+                      <option value="">None</option>
+                      {kit.map((x) => (
+                        <option key={x.id} value={x.id}>
+                          {x.tag} · {x.name}
+                        </option>
+                      ))}
+                    </AutoSelect>
+                    {t.assetId && (
+                      <Link href={`/it/assets/${t.assetId}`} style={{ fontSize: ".8rem" }}>
+                        Open item
+                      </Link>
+                    )}
                   </dd>
                   <dt>Raised</dt>
                   <dd>{whenFull(t.createdAt)}</dd>
