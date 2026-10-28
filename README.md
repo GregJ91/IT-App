@@ -18,7 +18,7 @@ A bespoke IT app for raising and handling IT jobs, managing inventory, keeping p
 | Users | Under 50 staff, 3 sites |
 | Platform | PWA (desktop + phone), works offline for the IT team |
 | Sign-in | Slack, Google, Microsoft (Entra ID), email and password |
-| Roles | Staff sign in on the public sign-in page and can only raise and track their own jobs. IT team accounts are invite only: an admin sends a one-time link (email, Slack or copied), valid 7 days, that works on phone or browser. The person picks a sign-in method and adds an authenticator code, then can scan a QR code to sign in on their phone too. Roles: Staff, IT tech, IT admin |
+| Roles | Staff sign in on the public sign-in page and can only raise and track their own jobs. IT team accounts are invite only: an admin sends a one-time link (email, Slack or copied), valid 7 days, that works on phone or browser. The person picks a sign-in method and adds an authenticator code, then can scan a QR code to sign in on their phone too. After that they sign in on the normal sign-in page with the same method plus their authenticator code, and get the IT view. Roles: Staff, IT tech, IT admin |
 | Tickets | Title, description, screenshots, site + location, priority, contact number |
 | Statuses | New → In progress → Waiting on user → Resolved → Closed |
 | SLAs | Yes, per priority (targets to confirm) |
