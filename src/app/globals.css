@@ -166,6 +166,8 @@ main {
 .sla.late, .t-late { color: var(--bad); font-weight: 600; }
 .sla.soon, .t-soon { color: var(--warn); font-weight: 600; }
 .sla.met, .t-met { color: var(--ok); }
+.sla.paused, .t-paused { color: var(--muted); font-style: italic; }
+.meter i.paused { background: var(--muted); }
 .sla.missed, .t-missed { color: var(--bad); }
 .empty { padding: 32px var(--pad); text-align: center; color: var(--muted); display: flex; flex-direction: column; gap: 10px; align-items: center; }
 

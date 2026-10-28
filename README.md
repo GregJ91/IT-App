@@ -23,6 +23,7 @@ A bespoke IT app for raising and handling IT jobs, managing inventory, keeping p
 - Ticket queue with Open / Mine / Unassigned / Resolved / All views, search (including by IT-number) and filters by site and priority.
 - Ticket page: status, assignee, priority, category and site (they save as soon as they change), SLA timers for first response and fix, replies to the requester, internal notes staff never see, screenshots, time logging and the rating.
 - Settings (admins): invite people, change roles or remove someone from IT, SLA targets per priority, assignment rules, sites and categories.
+- SLA clocks: each priority counts either "any time" (day and night) or only in working hours (5am to 9pm every day by default, UK time, including the clock changes). The fix clock pauses while a job is Waiting on user and restarts when they reply. Changing the settings updates the deadlines on open jobs.
 
 **Everywhere**
 - Email notifications for new jobs, assignments, replies and status changes. Until email is set up, they are printed to the server log.
@@ -35,7 +36,8 @@ A bespoke IT app for raising and handling IT jobs, managing inventory, keeping p
 | What | Placeholder now | Where to change it |
 | --- | --- | --- |
 | Site names | Head Office, Warehouse, Showroom | Settings → Sites |
-| SLA targets | P1 15 min / 4 h, P2 1 h / 1 day, P3 4 h / 3 days, P4 1 day / 5 days (clock time, 24/7) | Settings → SLA targets |
+| SLA targets | P1 15 min / 4 h, P2 1 h / 1 day (any time); P3 4 h / 3 days, P4 1 day / 5 days (working hours) | Settings → SLA targets |
+| Working hours | 5am to 9pm, every day, UK time. The fix clock pauses while waiting on the requester | Settings → Working hours |
 | Assignment rules | None, so new jobs start unassigned | Settings → Assignment rules |
 | Categories | Hardware, Software, Network, Printer, Onboarding, Request, Other | Settings → Categories |
 | First IT admin | Whatever `ADMIN_EMAIL` is set to | `.env`, then `npm run db:seed` |
@@ -106,7 +108,6 @@ Each phase is tested before moving to the next.
 ## Not in Phase 1 yet
 
 - Raising jobs from Slack (a /ithelp command or posting in a channel). Slack notifications are done.
-- SLA clocks run 24/7. They don't yet pause outside working hours or while waiting on the requester.
 - Offline changes: the IT team can read recently opened pages without signal, but can't save changes offline yet.
 - Scanning a QR code on a computer to sign in on a phone (sign in on the phone the normal way instead).
 - Screenshots are stored on the server's disk. Move them to cloud storage once hosting is decided.

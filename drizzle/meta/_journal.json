@@ -15,6 +15,13 @@
       "when": 1793179044779,
       "tag": "0001_slack_thread",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793187506327,
+      "tag": "0002_working_hours",
+      "breakpoints": true
     }
   ]
 }

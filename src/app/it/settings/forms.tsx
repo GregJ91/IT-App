@@ -1,7 +1,7 @@
 "use client";
 import { useActionState, useEffect, useRef } from "react";
 import { CopyButton } from "@/components/copy-button";
-import { addListItem, changeRole, newInviteLink, renameListItem, saveSla, sendInvite, testSlack, type SettingsState } from "./actions";
+import { addListItem, changeRole, newInviteLink, renameListItem, saveSla, saveWorkingHours, sendInvite, testSlack, type SettingsState } from "./actions";
 
 function Msg({ s }: { s: SettingsState }) {
   if (!s) return null;
@@ -83,7 +83,7 @@ export function RoleSelect({ userId, role, self }: { userId: string; role: strin
 
 const split = (min: number): [number, string] => (min % 1440 === 0 ? [min / 1440, "days"] : min % 60 === 0 ? [min / 60, "hours"] : [min, "min"]);
 
-export function SlaForm({ policies }: { policies: { priority: number; label: string; responseMinutes: number; resolveMinutes: number }[] }) {
+export function SlaForm({ policies }: { policies: { priority: number; label: string; responseMinutes: number; resolveMinutes: number; counts: string }[] }) {
   const [state, action, pending] = useActionState<SettingsState, FormData>(saveSla, undefined);
   const Unit = ({ name, value }: { name: string; value: string }) => (
     <select name={name} defaultValue={value} aria-label="Unit" style={{ minWidth: 80 }}>
@@ -101,6 +101,7 @@ export function SlaForm({ policies }: { policies: { priority: number; label: str
               <th>Priority</th>
               <th>First response</th>
               <th>Fixed within</th>
+              <th>Counts</th>
             </tr>
           </thead>
           <tbody>
@@ -123,6 +124,12 @@ export function SlaForm({ policies }: { policies: { priority: number; label: str
                       <input name={`f${p.priority}`} type="number" min={1} defaultValue={f} aria-label={`P${p.priority} fixed within`} />
                       <Unit name={`fu${p.priority}`} value={fu} />
                     </span>
+                  </td>
+                  <td>
+                    <select name={`c${p.priority}`} defaultValue={p.counts} aria-label={`P${p.priority} counts`} style={{ minWidth: 130 }}>
+                      <option value="any">Any time</option>
+                      <option value="hours">Working hours</option>
+                    </select>
                   </td>
                 </tr>
               );
@@ -201,6 +208,59 @@ export function SlackTest() {
       <div className="actions">
         <button className="btn" disabled={pending}>
           {pending ? "Sending…" : "Send test message"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+const DAYS = [
+  [1, "Mon"],
+  [2, "Tue"],
+  [3, "Wed"],
+  [4, "Thu"],
+  [5, "Fri"],
+  [6, "Sat"],
+  [0, "Sun"],
+] as const;
+
+export function WorkingHoursForm({ hours, pause }: { hours: { start: string; end: string; days: number[] }; pause: boolean }) {
+  const [state, action, pending] = useActionState<SettingsState, FormData>(saveWorkingHours, undefined);
+  return (
+    <form action={action} className="panel-body stack" style={{ gap: 12 }}>
+      <div className="actions">
+        <label className="field" style={{ gap: 4 }}>
+          <span className="flabel" style={{ fontWeight: 600, fontSize: ".86rem" }}>From</span>
+          <input className="input" type="time" name="start" defaultValue={hours.start} required style={{ width: 130 }} />
+        </label>
+        <label className="field" style={{ gap: 4 }}>
+          <span className="flabel" style={{ fontWeight: 600, fontSize: ".86rem" }}>Until</span>
+          <input className="input" type="time" name="end" defaultValue={hours.end} required style={{ width: 130 }} />
+        </label>
+      </div>
+      <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+        <legend style={{ fontWeight: 600, fontSize: ".86rem", marginBottom: 6 }}>Days</legend>
+        <div className="actions">
+          {DAYS.map(([n, label]) => (
+            <label key={n} className="chip plain" style={{ padding: "6px 10px", cursor: "pointer", gap: 6 }}>
+              <input type="checkbox" name="days" value={n} defaultChecked={hours.days.includes(n)} />
+              {label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <label className="setting" style={{ cursor: "pointer" }}>
+        <span>
+          <strong>Pause the fix clock while waiting on the requester</strong>
+          <br />
+          <span className="muted" style={{ fontSize: ".8rem" }}>It restarts as soon as they reply or the status changes.</span>
+        </span>
+        <input type="checkbox" name="pause" defaultChecked={pause} style={{ width: 20, height: 20 }} />
+      </label>
+      <Msg s={state} />
+      <div className="actions">
+        <button className="btn primary" disabled={pending}>
+          Save working hours
         </button>
       </div>
     </form>

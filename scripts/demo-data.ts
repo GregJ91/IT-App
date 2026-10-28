@@ -7,6 +7,7 @@ import { eq, sql } from "drizzle-orm";
 import { db, schema } from "../src/db";
 import type { Actor, Role } from "../src/lib/roles";
 import { dueDates } from "../src/lib/sla";
+import { recomputeOpenTickets } from "../src/lib/sla-rules";
 import { addMessage, createTicket, logTime, rateTicket, updateTicket } from "../src/lib/tickets";
 
 if (/ithub$/.test(process.env.DATABASE_URL ?? "") && !process.argv.includes("--yes")) {
@@ -147,5 +148,7 @@ await job(josh, 20 * 60, { title: "Second monitor flickering", description: "The
 await job(dave, 70, { title: "Toner low on the dispatch laser printer", description: "Printer says toner low. We're on the last spare.", priority: 4, cat: "Printer", site: "Warehouse", location: "Dispatch" });
 await job(priya, 12, { title: "Teams camera not working", description: "Camera shows a black square in Teams calls. Fine in the Camera app.", priority: 3, cat: "Software", site: "Head Office", location: "Meeting room 2" });
 
+// Dates were moved back above, so work the deadlines out again from the history.
+await recomputeOpenTickets();
 console.info(`Demo data added: ${old.length + 7} jobs.`);
 process.exit(0);

@@ -4,7 +4,7 @@ import { db, schema } from "@/db";
 import type { Actor, Role } from "@/lib/roles";
 
 export async function resetData() {
-  await db.execute(sql`truncate table ticket_event, time_entry, attachment, ticket_message, ticket, assignment_rule, invite, session_check, session, account, two_factor, "user", site, category, sla_policy restart identity cascade`);
+  await db.execute(sql`truncate table ticket_event, time_entry, attachment, ticket_message, ticket, assignment_rule, invite, app_setting, session_check, session, account, two_factor, "user", site, category, sla_policy restart identity cascade`);
   await db.insert(schema.slaPolicy).values([
     { priority: 1, label: "Critical", responseMinutes: 15, resolveMinutes: 240 },
     { priority: 2, label: "High", responseMinutes: 60, resolveMinutes: 1440 },

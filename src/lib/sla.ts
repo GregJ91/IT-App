@@ -11,7 +11,7 @@ export function dueDates(createdAt: Date, policy: Pick<SlaPolicy, "responseMinut
   };
 }
 
-export type ClockState = "met" | "missed" | "ok" | "soon" | "late";
+export type ClockState = "met" | "missed" | "ok" | "soon" | "late" | "paused";
 
 export type Clock = {
   state: ClockState;
@@ -39,12 +39,21 @@ export function clock(startedAt: Date, dueAt: Date, doneAt: Date | null, now = n
 }
 
 export function ticketClocks(
-  t: { createdAt: Date; responseDueAt: Date; resolveDueAt: Date; firstResponseAt: Date | null; resolvedAt: Date | null },
+  t: {
+    createdAt: Date;
+    responseDueAt: Date;
+    resolveDueAt: Date;
+    firstResponseAt: Date | null;
+    resolvedAt: Date | null;
+    slaPausedAt?: Date | null;
+  },
   now = new Date(),
 ) {
+  const resolve = clock(t.createdAt, t.resolveDueAt, t.resolvedAt, now);
   return {
     response: clock(t.createdAt, t.responseDueAt, t.firstResponseAt, now),
-    resolve: clock(t.createdAt, t.resolveDueAt, t.resolvedAt, now),
+    // Waiting on the requester stops the fix clock.
+    resolve: t.slaPausedAt && !t.resolvedAt ? { ...resolve, state: "paused" as const, remainingMs: null } : resolve,
   };
 }
 
@@ -68,6 +77,7 @@ export function formatDuration(ms: number) {
 
 /** Short text for lists, e.g. "1h 10m left", "Overdue 25m", "SLA met". */
 export function clockLabel(c: Clock) {
+  if (c.state === "paused") return "Paused";
   if (c.state === "met") return "SLA met";
   if (c.state === "missed") return "SLA missed";
   if (c.state === "late") return `Overdue ${formatDuration(c.remainingMs!)}`;
@@ -87,13 +97,14 @@ type Rankable = Parameters<typeof headlineClock>[0] & { priority: number };
  * Order for the dashboard's "Needs attention" list:
  * 1. overdue Critical and High jobs (P1 before P2, then most overdue first)
  * 2. other overdue jobs (same order)
- * 3. everything else by deadline, soonest first.
+ * 3. everything else by deadline, soonest first
+ * 4. jobs paused while waiting on the requester.
  */
 export function byAttention<T extends Rankable>(list: T[], now = new Date()) {
   const keyed = list.map((t) => {
     const c = headlineClock(t, now);
     const late = c.state === "late";
-    const tier = late && t.priority <= 2 ? 0 : late ? 1 : 2;
+    const tier = late && t.priority <= 2 ? 0 : late ? 1 : c.state === "paused" ? 3 : 2;
     return { t, tier, due: c.dueAt.getTime() };
   });
   keyed.sort((a, b) => a.tier - b.tier || (a.tier < 2 ? a.t.priority - b.t.priority : 0) || a.due - b.due);

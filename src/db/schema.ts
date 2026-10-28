@@ -140,6 +140,15 @@ export const slaPolicy = pgTable("sla_policy", {
   label: text("label").notNull(),
   responseMinutes: integer("response_minutes").notNull(),
   resolveMinutes: integer("resolve_minutes").notNull(),
+  // "any" counts round the clock; "hours" counts only during working hours.
+  counts: text("counts").notNull().default("any"),
+});
+
+// Small app-wide settings, e.g. working hours. Values are JSON.
+export const appSetting = pgTable("app_setting", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 // Checked in order of position; the first matching rule wins. Null category or site matches anything.
@@ -181,6 +190,8 @@ export const ticket = pgTable(
     // Where the job was announced in the IT Slack channel, so updates go in its thread.
     slackChannel: text("slack_channel"),
     slackTs: text("slack_ts"),
+    // Set while the fix clock is paused (waiting on the requester).
+    slaPausedAt: timestamp("sla_paused_at", { withTimezone: true }),
   },
   (t) => [
     index("ticket_status_idx").on(t.status),

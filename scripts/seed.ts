@@ -4,14 +4,16 @@ import "dotenv/config";
 import { count, sql } from "drizzle-orm";
 import { db, schema } from "../src/db";
 import { createInvite, inviteUrl } from "../src/lib/invites";
+import { DEFAULT_SETTINGS, saveSlaSettings } from "../src/lib/sla-rules";
 
 const SITES = ["Head Office", "Warehouse", "Showroom"]; // placeholders until real names are confirmed
 const CATEGORIES = ["Hardware", "Software", "Network", "Printer", "Onboarding", "Request", "Other"];
+// Critical and High count any time; Normal and Low only in working hours.
 const SLA = [
-  { priority: 1, label: "Critical", responseMinutes: 15, resolveMinutes: 4 * 60 },
-  { priority: 2, label: "High", responseMinutes: 60, resolveMinutes: 24 * 60 },
-  { priority: 3, label: "Normal", responseMinutes: 4 * 60, resolveMinutes: 3 * 24 * 60 },
-  { priority: 4, label: "Low", responseMinutes: 24 * 60, resolveMinutes: 5 * 24 * 60 },
+  { priority: 1, label: "Critical", responseMinutes: 15, resolveMinutes: 4 * 60, counts: "any" },
+  { priority: 2, label: "High", responseMinutes: 60, resolveMinutes: 24 * 60, counts: "any" },
+  { priority: 3, label: "Normal", responseMinutes: 4 * 60, resolveMinutes: 3 * 24 * 60, counts: "hours" },
+  { priority: 4, label: "Low", responseMinutes: 24 * 60, resolveMinutes: 5 * 24 * 60, counts: "hours" },
 ];
 
 await db
@@ -23,6 +25,13 @@ await db
   .values(CATEGORIES.map((name, position) => ({ name, position })))
   .onConflictDoNothing();
 await db.insert(schema.slaPolicy).values(SLA).onConflictDoNothing();
+
+// Working hours: 5am to 9pm, every day (UK time). Only set the first time.
+const hadHours = await db.query.appSetting.findFirst({ where: sql`${schema.appSetting.key} = 'workingHours'` });
+if (!hadHours) {
+  await saveSlaSettings(DEFAULT_SETTINGS);
+  await db.execute(sql`update sla_policy set counts = 'hours' where priority in (3, 4)`);
+}
 
 // Ticket numbers start at IT-1001.
 const [{ n }] = await db.select({ n: count() }).from(schema.ticket);

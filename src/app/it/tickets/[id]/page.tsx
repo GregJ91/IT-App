@@ -28,7 +28,7 @@ function Timer({ label, c }: { label: string; c: Clock }) {
         <i className={c.state} style={{ width: `${Math.max(c.used * 100, 3)}%` }} />
       </div>
       <span className="muted" style={{ fontSize: ".75rem" }}>
-        Due {whenFull(c.dueAt)}
+        {c.state === "paused" ? "Waiting on the requester. Restarts when they reply." : `Due ${whenFull(c.dueAt)}`}
       </span>
     </div>
   );
@@ -43,8 +43,19 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
   const clocks = ticketClocks(t);
   const policy = lookups.policies.find((p) => p.priority === t.priority);
   const names = new Map(lookups.itUsers.map((x) => [x.id, x.name]));
-  const overall = ["late", "missed"].includes(clocks.resolve.state) || clocks.response.state === "late" || clocks.response.state === "missed" ? "s-bad" : clocks.resolve.state === "met" ? "s-ok" : clocks.response.state === "soon" || clocks.resolve.state === "soon" ? "s-waiting" : "s-progress";
-  const overallLabel = { "s-bad": "Overdue", "s-ok": "Met", "s-waiting": "Due soon", "s-progress": "On track" }[overall];
+  // The chip shows where things stand now; a late first reply that's already happened shows in its own row.
+  const states = [clocks.response.state, clocks.resolve.state];
+  const [overall, overallLabel] = states.includes("late")
+    ? ["s-bad", "Overdue"]
+    : clocks.resolve.state === "paused"
+      ? ["s-closed", "Paused"]
+      : clocks.resolve.state === "met"
+        ? ["s-ok", "Met"]
+        : clocks.resolve.state === "missed"
+          ? ["s-bad", "Missed"]
+          : states.includes("soon")
+            ? ["s-waiting", "Due soon"]
+            : ["s-progress", "On track"];
 
   return (
     <div className="page">

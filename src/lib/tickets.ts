@@ -4,6 +4,7 @@ import { db, schema } from "@/db";
 import { pickAssignee } from "./assignment";
 import { isITRole, type Actor } from "./roles";
 import { byAttention, dueDates } from "./sla";
+import { recomputeDue } from "./sla-rules";
 import * as alerts from "./ticket-alerts";
 import { saveUpload } from "./storage";
 import { OPEN_STATUSES, type Status } from "./tickets-shared";
@@ -91,8 +92,9 @@ export async function createTicket(requester: Actor, input: NewTicket, files: Fi
     await db.update(user).set({ phone: input.contactPhone }).where(eq(user.id, requester.id));
   }
 
-  await alerts.ticketCreated(row, requester, files.length);
-  return row;
+  const timed = (await recomputeDue(row.id)) ?? row;
+  await alerts.ticketCreated(timed, requester, files.length);
+  return timed;
 }
 
 /* ---------- lists ---------- */
@@ -114,6 +116,7 @@ const listColumns = {
   resolveDueAt: ticket.resolveDueAt,
   firstResponseAt: ticket.firstResponseAt,
   resolvedAt: ticket.resolvedAt,
+  slaPausedAt: ticket.slaPausedAt,
   assigneeId: ticket.assigneeId,
   requesterName: requester.name,
   assigneeName: assignee.name,
@@ -326,9 +329,8 @@ export async function updateTicket(id: number, actor: Actor, patch: TicketPatch)
     events.push({ type: "assigned", data: { from: t.assigneeId, to: patch.assigneeId } });
   }
   if (patch.priority && patch.priority !== t.priority) {
-    const policy = await policyFor(patch.priority);
+    await policyFor(patch.priority); // must exist
     set.priority = patch.priority;
-    Object.assign(set, dueDates(t.createdAt, policy));
     events.push({ type: "priority", data: { from: t.priority, to: patch.priority } });
   }
   if (patch.categoryId !== undefined && patch.categoryId !== t.categoryId) {
@@ -341,8 +343,10 @@ export async function updateTicket(id: number, actor: Actor, patch: TicketPatch)
   }
   if (events.length === 0) return t;
 
-  const [row] = await db.update(ticket).set(set).where(eq(ticket.id, id)).returning();
+  let [row] = await db.update(ticket).set(set).where(eq(ticket.id, id)).returning();
   await db.insert(ticketEvent).values(events.map((e) => ({ ticketId: id, actorId: actor.id, ...e })));
+  // Priority sets the targets; going into or out of "Waiting on user" pauses or restarts the clock.
+  if (set.priority || set.status) row = (await recomputeDue(id)) ?? row;
 
   await alerts.ticketChanged(t, row, actor);
   return row;
@@ -371,6 +375,7 @@ export async function addMessage(id: number, actor: Actor, body: string, interna
     await db.insert(ticketEvent).values({ ticketId: id, actorId: actor.id, type: "status", data: { from: t.status, to: "progress", reopened: t.status === "resolved" } });
   }
   await db.update(ticket).set(set).where(eq(ticket.id, id));
+  if (set.status) await recomputeDue(id);
 
   await alerts.messageAdded(t, actor, body, internal, it);
   return msg;
@@ -397,7 +402,7 @@ export async function rateTicket(id: number, actor: Actor, rating: number, comme
 export async function dashboard(userId: string, now = new Date()) {
   const open = await listTickets({ view: "open", userId, limit: 500 });
   const breaching = open.filter(
-    (t) => t.resolveDueAt < now || (!t.firstResponseAt && t.responseDueAt < now),
+    (t) => (t.resolveDueAt < now && !t.slaPausedAt) || (!t.firstResponseAt && t.responseDueAt < now),
   );
   const unassigned = open.filter((t) => !t.assigneeId);
   const mine = open.filter((t) => t.assigneeId === userId);

@@ -6,6 +6,8 @@ import { db, schema } from "@/db";
 import { createInvite, inviteUrl, reissueInvite, revokeInvite } from "@/lib/invites";
 import { sendMail } from "@/lib/notify";
 import { sendTestMessage } from "@/lib/slack";
+import { validHours } from "@/lib/calendar";
+import { recomputeOpenTickets, saveSlaSettings } from "@/lib/sla-rules";
 import { requireAdmin } from "@/lib/session";
 
 export type SettingsState = { error?: string; ok?: string; link?: string } | undefined;
@@ -124,9 +126,28 @@ export async function saveSla(_: SettingsState, form: FormData): Promise<Setting
     const res = Number(form.get(`f${r.priority}`)) * (UNIT[String(form.get(`fu${r.priority}`))] ?? 1);
     if (!(resp > 0) || !(res > 0)) return { error: `Enter times above zero for P${r.priority}.` };
     if (res < resp) return { error: `P${r.priority}: fixing can't be due before the first response.` };
-    await db.update(schema.slaPolicy).set({ responseMinutes: Math.round(resp), resolveMinutes: Math.round(res) }).where(eq(schema.slaPolicy.priority, r.priority));
+    const counts = form.get(`c${r.priority}`) === "hours" ? "hours" : "any";
+    await db
+      .update(schema.slaPolicy)
+      .set({ responseMinutes: Math.round(resp), resolveMinutes: Math.round(res), counts })
+      .where(eq(schema.slaPolicy.priority, r.priority));
   }
-  return done("SLA targets saved. They apply to new tickets and to tickets whose priority changes.");
+  const n = await recomputeOpenTickets();
+  return done(`SLA targets saved. Deadlines on ${n} open job${n === 1 ? "" : "s"} have been updated.`);
+}
+
+export async function saveWorkingHours(_: SettingsState, form: FormData): Promise<SettingsState> {
+  await requireAdmin();
+  const hours = {
+    start: String(form.get("start") ?? ""),
+    end: String(form.get("end") ?? ""),
+    days: form.getAll("days").map(Number).sort(),
+  };
+  if (!validHours(hours)) return { error: "Pick a start and finish time (finish after start) and at least one day." };
+  if (hours.days.length === 0) return { error: "Pick at least one day." };
+  await saveSlaSettings({ hours, pauseWhileWaiting: form.get("pause") === "on" });
+  const n = await recomputeOpenTickets();
+  return done(`Saved. Deadlines on ${n} open job${n === 1 ? "" : "s"} have been updated.`);
 }
 
 /* ---------- sites and categories ---------- */

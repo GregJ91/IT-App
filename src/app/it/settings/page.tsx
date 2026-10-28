@@ -5,7 +5,8 @@ import { requireAdmin } from "@/lib/session";
 import { formatMinutes } from "@/lib/sla";
 import { getLookups } from "@/lib/tickets";
 import { addRule, archiveListItem, cancelInvite, deleteRule, moveRule } from "./actions";
-import { InviteForm, ListEditor, NewLinkButton, RoleSelect, SlackTest, SlaForm } from "./forms";
+import { InviteForm, ListEditor, NewLinkButton, RoleSelect, SlackTest, SlaForm, WorkingHoursForm } from "./forms";
+import { getSlaSettings } from "@/lib/sla-rules";
 import { slackChannelName, slackMode } from "@/lib/slack";
 
 export const metadata = { title: "Settings" };
@@ -14,7 +15,7 @@ const dateFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short
 
 export default async function Settings() {
   const me = await requireAdmin();
-  const [lookups, rules, invites, team, staffCount] = await Promise.all([
+  const [lookups, rules, invites, team, staffCount, slaSettings] = await Promise.all([
     getLookups(),
     db.select().from(schema.assignmentRule).orderBy(asc(schema.assignmentRule.position), asc(schema.assignmentRule.id)),
     listInvites(),
@@ -24,6 +25,7 @@ export default async function Settings() {
       .where(inArray(schema.user.role, ["tech", "admin"]))
       .orderBy(desc(schema.user.role), asc(schema.user.name)),
     db.$count(schema.user, inArray(schema.user.role, ["staff"])),
+    getSlaSettings(),
   ]);
   const slack = slackMode();
   const pending = invites.filter((i) => inviteStatus(i) === "pending");
@@ -91,17 +93,27 @@ export default async function Settings() {
 
         <section className="panel">
           <div className="panel-head">
-            <h2>SLA targets</h2>
-            <span className="muted" style={{ fontSize: ".78rem" }}>Clock time, 24/7</span>
+            <h2>Working hours</h2>
+            <span className="muted" style={{ fontSize: ".78rem" }}>For priorities set to &ldquo;Working hours&rdquo;</span>
           </div>
-          <SlaForm policies={lookups.policies} />
-          <div className="panel-body" style={{ paddingTop: 0 }}>
-            <p className="note">
-              Now: {lookups.policies.map((p) => `P${p.priority} respond ${formatMinutes(p.responseMinutes)}, fix ${formatMinutes(p.resolveMinutes)}`).join(" · ")}
-            </p>
-          </div>
+          <WorkingHoursForm hours={slaSettings.hours} pause={slaSettings.pauseWhileWaiting} />
         </section>
       </div>
+
+      <section className="panel">
+        <div className="panel-head">
+          <h2>SLA targets</h2>
+          <span className="muted" style={{ fontSize: ".78rem" }}>UK time</span>
+        </div>
+        <SlaForm policies={lookups.policies} />
+        <div className="panel-body" style={{ paddingTop: 0 }}>
+          <p className="note">
+            Now: {lookups.policies.map((p) => `P${p.priority} respond ${formatMinutes(p.responseMinutes)}, fix ${formatMinutes(p.resolveMinutes)}`).join(" · ")}.
+            &ldquo;Any time&rdquo; counts day and night. &ldquo;Working hours&rdquo; only counts the times set under Working hours, so a job logged after hours starts counting
+            the next morning.
+          </p>
+        </div>
+      </section>
 
       <section className="panel">
         <div className="panel-head">
