@@ -11,6 +11,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
+    "db:demo": "tsx scripts/demo-data.ts",
     "test": "vitest run",
     "test:e2e": "playwright test"
   },

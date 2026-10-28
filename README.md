@@ -56,7 +56,7 @@ npm run db:seed               # prints the first IT admin's invite link
 npm run dev                   # http://localhost:3000
 ```
 
-Open the printed link to set up the first admin. Staff can sign up at `/sign-up` with an address on `ALLOWED_EMAIL_DOMAINS`.
+Open the printed link to set up the first admin. To try it with a believable week of example jobs, point `DATABASE_URL` at a spare database and run `npm run db:demo` after creating the admin and one staff account (it takes their emails as arguments). Staff can sign up at `/sign-up` with an address on `ALLOWED_EMAIL_DOMAINS`.
 
 ### Tests
 
