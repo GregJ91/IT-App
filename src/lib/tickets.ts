@@ -2,11 +2,11 @@ import { and, asc, count, desc, eq, ilike, inArray, isNull, ne, or, sql, type SQ
 import { alias } from "drizzle-orm/pg-core";
 import { db, schema } from "@/db";
 import { pickAssignee } from "./assignment";
-import { link, sendMail } from "./notify";
 import { isITRole, type Actor } from "./roles";
 import { dueDates } from "./sla";
+import * as alerts from "./ticket-alerts";
 import { saveUpload } from "./storage";
-import { OPEN_STATUSES, STATUS_LABEL, ticketRef, type Status } from "./tickets-shared";
+import { OPEN_STATUSES, type Status } from "./tickets-shared";
 
 const { ticket, ticketMessage, attachment, ticketEvent, timeEntry, user, site, category, slaPolicy, assignmentRule } =
   schema;
@@ -27,17 +27,6 @@ export async function getLookups() {
       .orderBy(asc(user.name)),
   ]);
   return { sites, categories, policies, itUsers };
-}
-
-async function itEmails() {
-  const rows = await db.select({ email: user.email }).from(user).where(inArray(user.role, ["tech", "admin"]));
-  return rows.map((r) => r.email);
-}
-
-async function userEmail(id: string | null) {
-  if (!id) return null;
-  const row = await db.query.user.findFirst({ where: eq(user.id, id), columns: { email: true } });
-  return row?.email ?? null;
 }
 
 async function policyFor(priority: number) {
@@ -102,18 +91,7 @@ export async function createTicket(requester: Actor, input: NewTicket, files: Fi
     await db.update(user).set({ phone: input.contactPhone }).where(eq(user.id, requester.id));
   }
 
-  const ref = ticketRef(row.id);
-  const to = assigneeId ? await userEmail(assigneeId) : await itEmails();
-  await sendMail({
-    to: to ?? [],
-    subject: `[${ref}] P${row.priority} ${row.title}`,
-    text: `${requester.name} raised a job${assigneeId ? " and it was assigned to you" : ""}.\n\n${row.title}\n\n${row.description}\n\nContact: ${row.contactPhone || "not given"}\nOpen: ${link(`/it/tickets/${row.id}`)}`,
-  });
-  await sendMail({
-    to: requester.email,
-    subject: `[${ref}] We've got your request`,
-    text: `Thanks, ${requester.name}. IT has your job "${row.title}".\n\nTrack it here: ${link(`/my/${row.id}`)}`,
-  });
+  await alerts.ticketCreated(row, requester, files.length);
   return row;
 }
 
@@ -366,28 +344,7 @@ export async function updateTicket(id: number, actor: Actor, patch: TicketPatch)
   const [row] = await db.update(ticket).set(set).where(eq(ticket.id, id)).returning();
   await db.insert(ticketEvent).values(events.map((e) => ({ ticketId: id, actorId: actor.id, ...e })));
 
-  const ref = ticketRef(id);
-  if (set.status && ["waiting", "resolved", "closed"].includes(set.status)) {
-    const to = await userEmail(t.requesterId);
-    const what =
-      set.status === "waiting"
-        ? "IT needs something from you to carry on."
-        : set.status === "resolved"
-          ? "IT has marked this as fixed. If it isn't, reply and it will reopen."
-          : "This job is now closed.";
-    await sendMail({
-      to: to ?? [],
-      subject: `[${ref}] ${STATUS_LABEL[set.status as Status]}: ${t.title}`,
-      text: `${what}\n\n${link(`/my/${id}`)}`,
-    });
-  }
-  if (set.assigneeId && set.assigneeId !== actor.id) {
-    await sendMail({
-      to: (await userEmail(set.assigneeId)) ?? [],
-      subject: `[${ref}] Assigned to you: ${t.title}`,
-      text: `${actor.name} assigned you ${ref}.\n\n${link(`/it/tickets/${id}`)}`,
-    });
-  }
+  await alerts.ticketChanged(t, row, actor);
   return row;
 }
 
@@ -415,21 +372,7 @@ export async function addMessage(id: number, actor: Actor, body: string, interna
   }
   await db.update(ticket).set(set).where(eq(ticket.id, id));
 
-  const ref = ticketRef(id);
-  if (it && !internal) {
-    await sendMail({
-      to: (await userEmail(t.requesterId)) ?? [],
-      subject: `[${ref}] New reply: ${t.title}`,
-      text: `${actor.name} replied:\n\n${body.trim()}\n\nReply here: ${link(`/my/${id}`)}`,
-    });
-  } else if (!it) {
-    const to = t.assigneeId ? await userEmail(t.assigneeId) : await itEmails();
-    await sendMail({
-      to: to ?? [],
-      subject: `[${ref}] ${actor.name} replied: ${t.title}`,
-      text: `${body.trim()}\n\n${link(`/it/tickets/${id}`)}`,
-    });
-  }
+  await alerts.messageAdded(t, actor, body, internal, it);
   return msg;
 }
 
@@ -446,6 +389,7 @@ export async function rateTicket(id: number, actor: Actor, rating: number, comme
   if (!Number.isInteger(rating) || rating < 1 || rating > 5) throw new TicketError("Pick 1 to 5 stars.");
   await db.update(ticket).set({ satisfaction: rating, satisfactionComment: comment.trim() || null }).where(eq(ticket.id, id));
   await db.insert(ticketEvent).values({ ticketId: id, actorId: actor.id, type: "rated", data: { rating } });
+  await alerts.ticketRated(t, actor, rating, comment);
 }
 
 /* ---------- dashboard ---------- */

@@ -5,7 +5,8 @@ import { requireAdmin } from "@/lib/session";
 import { formatMinutes } from "@/lib/sla";
 import { getLookups } from "@/lib/tickets";
 import { addRule, archiveListItem, cancelInvite, deleteRule, moveRule } from "./actions";
-import { InviteForm, ListEditor, NewLinkButton, RoleSelect, SlaForm } from "./forms";
+import { InviteForm, ListEditor, NewLinkButton, RoleSelect, SlackTest, SlaForm } from "./forms";
+import { slackChannelName, slackMode } from "@/lib/slack";
 
 export const metadata = { title: "Settings" };
 
@@ -24,6 +25,7 @@ export default async function Settings() {
       .orderBy(desc(schema.user.role), asc(schema.user.name)),
     db.$count(schema.user, inArray(schema.user.role, ["staff"])),
   ]);
+  const slack = slackMode();
   const pending = invites.filter((i) => inviteStatus(i) === "pending");
   const siteName = new Map(lookups.sites.map((s) => [s.id, s.name]));
   const catName = new Map(lookups.categories.map((c) => [c.id, c.name]));
@@ -183,6 +185,48 @@ export default async function Settings() {
           </select>
           <button className="btn primary">Add rule</button>
         </form>
+      </section>
+
+      <section className="panel">
+        <div className="panel-head">
+          <h2>Slack</h2>
+          <span className={`chip ${slack === "off" ? "s-closed" : "s-ok"}`}>{slack === "bot" ? "Connected" : slack === "webhook" ? "Connected (webhook)" : "Not connected"}</span>
+        </div>
+        <div className="panel-body stack" style={{ gap: 12 }}>
+          {slack === "bot" && (
+            <div className="list">
+              <div>
+                <span>New jobs are posted to the IT channel</span>
+                <span className="mono muted">{slackChannelName()}</span>
+              </div>
+              <div>
+                <span>Status changes, assignments, replies and ratings go in each job&apos;s thread</span>
+                <span className="chip s-ok">On</span>
+              </div>
+              <div>
+                <span>People get a direct message about their own jobs, and when a job is assigned to them</span>
+                <span className="chip s-ok">On</span>
+              </div>
+              <div>
+                <span>Internal notes</span>
+                <span className="muted">Never sent to Slack</span>
+              </div>
+            </div>
+          )}
+          {slack === "webhook" && (
+            <p className="muted">New jobs are posted to one channel. Add a bot token to also get threads and direct messages.</p>
+          )}
+          {slack === "off" && (
+            <p className="muted">
+              Connect a Slack app to post new jobs to your IT channel and message people about their jobs. The steps are in{" "}
+              <span className="mono">docs/slack-setup.md</span>.
+            </p>
+          )}
+          <SlackTest />
+          <p className="muted" style={{ fontSize: ".78rem" }}>
+            Slack messages go to people whose Slack account uses the same email address as their IT Hub account.
+          </p>
+        </div>
       </section>
 
       <div className="grid cols-2" style={{ alignItems: "start" }}>

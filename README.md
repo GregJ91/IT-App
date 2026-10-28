@@ -4,7 +4,7 @@ A bespoke IT app for raising and handling IT jobs, managing inventory, keeping p
 
 ## Where we are
 
-**Phase 1 (tickets) is built and tested, using placeholder settings.** Slack is not in it yet.
+**Phase 1 (tickets) is built and tested, using placeholder settings.** Slack notifications are built and tested against a stand-in Slack; they need a Slack app to go live (see `docs/slack-setup.md`). Raising jobs from Slack is still to come.
 
 `design/prototype.html` is the clickable design prototype with example data. The real app follows its **E · Ocean** style.
 
@@ -26,6 +26,7 @@ A bespoke IT app for raising and handling IT jobs, managing inventory, keeping p
 
 **Everywhere**
 - Email notifications for new jobs, assignments, replies and status changes. Until email is set up, they are printed to the server log.
+- Slack notifications: every new job is posted to the IT channel with an Open ticket button, and status changes, assignments, replies and ratings go in that message's thread. People get a direct message when IT replies to their job or changes its status, and IT staff when a job is assigned to them. Internal notes are never sent to Slack. Settings → Slack has a Send test message button.
 - Installable on phones. Pages opened recently still open without signal; changes need a connection.
 - Screenshots are only served to the person who raised the job and the IT team.
 
@@ -41,6 +42,7 @@ A bespoke IT app for raising and handling IT jobs, managing inventory, keeping p
 | Logo | Low-res crop from a website screenshot | `public/brand/logo.png` |
 | Microsoft / Google / Slack sign-in | Off until keys are added | `.env` |
 | Email sending | Printed to the server log | `SMTP_*` in `.env` |
+| Slack | Off until a Slack app is connected | `SLACK_BOT_TOKEN` and `SLACK_CHANNEL` in `.env` ([setup steps](docs/slack-setup.md)) |
 
 ## Running it
 
@@ -64,7 +66,7 @@ npm test                      # unit and database tests (uses the ithub_test dat
 npm run build && npm run test:e2e   # end-to-end in a browser (uses the ithub_e2e database)
 ```
 
-The end-to-end run walks through the whole story: an admin joins by invite and sets up an authenticator, a member of staff raises a job with a screenshot on a phone, IT replies, adds a private note, logs time and resolves it, the requester sees the reply but not the note and rates it, signing in again asks for a code, and the admin invites a tech and changes SLA targets.
+The end-to-end run walks through the whole story: an admin joins by invite and sets up an authenticator, a member of staff raises a job with a screenshot on a phone, IT replies, adds a private note, logs time and resolves it, the requester sees the reply but not the note and rates it, signing in again asks for a code, and the admin invites a tech and changes SLA targets. It also checks every message that would have gone to Slack, using a stand-in Slack server (`tests/fake-slack.ts`).
 
 ### Code map
 
@@ -94,7 +96,7 @@ The end-to-end run walks through the whole story: an admin joins by invite and s
 ## Phases
 
 0. **Design**: done (E · Ocean)
-1. **Tickets**: built and tested with placeholders. Slack integration still to add.
+1. **Tickets**: built and tested with placeholders, including Slack notifications. Raising jobs from Slack still to add.
 2. **Inventory + printers**: assets, stock, QR scanning, photos, printer register (optional SNMP live status)
 3. **Networking**: UniFi integration per site
 4. **WhatsApp and extras**
@@ -103,7 +105,7 @@ Each phase is tested before moving to the next.
 
 ## Not in Phase 1 yet
 
-- Slack: raising jobs and getting updates from Slack.
+- Raising jobs from Slack (a /ithelp command or posting in a channel). Slack notifications are done.
 - SLA clocks run 24/7. They don't yet pause outside working hours or while waiting on the requester.
 - Offline changes: the IT team can read recently opened pages without signal, but can't save changes offline yet.
 - Scanning a QR code on a computer to sign in on a phone (sign in on the phone the normal way instead).

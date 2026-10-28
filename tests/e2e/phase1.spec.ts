@@ -188,3 +188,29 @@ test("dashboard reflects the work", async () => {
   await shot(p2, "10-dashboard-phone");
   await phone.close();
 });
+
+test("Slack: the IT channel and the requester were kept up to date, and the test button works", async ({ request }) => {
+  type Call = { method: string; body: { channel?: string; text?: string; thread_ts?: string; blocks?: unknown } };
+  const calls = (await (await request.get("http://localhost:3199/_calls")).json()) as Call[];
+  const posts = calls.filter((c) => c.method === "chat.postMessage");
+  const channel = posts.filter((c) => c.body.channel === "C0ITJOBS");
+  const toKirsty = posts.filter((c) => c.body.channel === "UKIRSTY").map((c) => c.body.text);
+
+  const announce = channel.find((c) => !c.body.thread_ts)!;
+  expect(announce.body.text).toMatch(/^New job IT-\d+ \(P1\): Label printer printing blank labels$/);
+  expect(JSON.stringify(announce.body.blocks)).toContain("raised by <@UKIRSTY>");
+  const thread = channel.filter((c) => c.body.thread_ts === "1700000001.000100").map((c) => c.body.text);
+  expect(thread).toContain("Greg J replied to the requester: On my way over. Please use bench 1 for now.");
+  expect(thread).toContain("Greg J set the status to *Resolved*");
+  expect(thread.some((t) => t?.startsWith("Kirsty P rated the fix ★★★★☆"))).toBe(true);
+  expect(toKirsty[0]).toMatch(/^Got it\. IT has your job IT-\d+/);
+  expect(toKirsty).toContainEqual(expect.stringContaining("Greg J replied on IT-"));
+  expect(JSON.stringify(calls)).not.toContain("Printhead looks worn");
+
+  const page = await adminCtx.newPage();
+  await page.goto("/it/settings");
+  await expect(page.getByText("Connected", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Send test message" }).click();
+  await expect(page.getByText("Sent to the channel as @it_hub in Gardeners Dream.")).toBeVisible();
+  await page.locator("section", { hasText: "Send test message" }).screenshot({ path: "test-results/screens/11-slack-settings.png" });
+});

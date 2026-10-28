@@ -1,7 +1,7 @@
 "use client";
 import { useActionState, useEffect, useRef } from "react";
 import { CopyButton } from "@/components/copy-button";
-import { addListItem, changeRole, newInviteLink, renameListItem, saveSla, sendInvite, type SettingsState } from "./actions";
+import { addListItem, changeRole, newInviteLink, renameListItem, saveSla, sendInvite, testSlack, type SettingsState } from "./actions";
 
 function Msg({ s }: { s: SettingsState }) {
   if (!s) return null;
@@ -190,5 +190,19 @@ export function ListEditor(props: { kind: "site" | "category"; title: string; it
         <p className="muted" style={{ fontSize: ".78rem" }}>Hidden ones stay on old tickets but can&apos;t be picked for new ones.</p>
       </div>
     </section>
+  );
+}
+
+export function SlackTest() {
+  const [state, action, pending] = useActionState<SettingsState, FormData>(testSlack, undefined);
+  return (
+    <form action={action} className="stack" style={{ gap: 8 }}>
+      <Msg s={state} />
+      <div className="actions">
+        <button className="btn" disabled={pending}>
+          {pending ? "Sending…" : "Send test message"}
+        </button>
+      </div>
+    </form>
   );
 }

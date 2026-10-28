@@ -178,6 +178,9 @@ export const ticket = pgTable(
     closedAt: timestamp("closed_at", { withTimezone: true }),
     satisfaction: integer("satisfaction"),
     satisfactionComment: text("satisfaction_comment"),
+    // Where the job was announced in the IT Slack channel, so updates go in its thread.
+    slackChannel: text("slack_channel"),
+    slackTs: text("slack_ts"),
   },
   (t) => [
     index("ticket_status_idx").on(t.status),

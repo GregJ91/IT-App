@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { createInvite, inviteUrl, reissueInvite, revokeInvite } from "@/lib/invites";
 import { sendMail } from "@/lib/notify";
+import { sendTestMessage } from "@/lib/slack";
 import { requireAdmin } from "@/lib/session";
 
 export type SettingsState = { error?: string; ok?: string; link?: string } | undefined;
@@ -172,3 +173,11 @@ export async function archiveListItem(form: FormData) {
   revalidatePath("/it/settings");
 }
 
+
+/* ---------- Slack ---------- */
+
+export async function testSlack(_: SettingsState): Promise<SettingsState> {
+  const admin = await requireAdmin();
+  const res = await sendTestMessage(admin.name);
+  return res.ok ? { ok: res.detail } : { error: res.detail };
+}

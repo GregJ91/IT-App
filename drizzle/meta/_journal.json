@@ -8,6 +8,13 @@
       "when": 1793177094914,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793179044779,
+      "tag": "0001_slack_thread",
+      "breakpoints": true
     }
   ]
 }
