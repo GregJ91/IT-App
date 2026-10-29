@@ -10,6 +10,7 @@ import {
   serial,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 /* ---------- Better Auth tables (names and columns follow its schema) ---------- */
@@ -395,3 +396,111 @@ export const licence = pgTable("licence", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/* ---------- Phase 3: network (UniFi) ---------- */
+
+// A UniFi source: an on-site console (local API), UniFi's cloud Site Manager, or the built-in example network.
+export const netConnection = pgTable("net_connection", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  // "console" | "cloud" | "example"
+  kind: text("kind").notNull(),
+  url: text("url").notNull().default(""),
+  // AES-GCM encrypted with a key derived from BETTER_AUTH_SECRET. Never sent to the browser.
+  apiKeyEnc: text("api_key_enc").notNull().default(""),
+  // UniFi consoles use their own certificate; trusting it skips the usual certificate check for this address only.
+  trustCert: boolean("trust_cert").notNull().default(false),
+  enabled: boolean("enabled").notNull().default(true),
+  lastPollAt: timestamp("last_poll_at", { withTimezone: true }),
+  lastOkAt: timestamp("last_ok_at", { withTimezone: true }),
+  lastError: text("last_error"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const netSite = pgTable(
+  "net_site",
+  {
+    id: serial("id").primaryKey(),
+    connectionId: integer("connection_id")
+      .notNull()
+      .references(() => netConnection.id, { onDelete: "cascade" }),
+    externalId: text("external_id").notNull(),
+    name: text("name").notNull(),
+    // Which of our sites this is.
+    siteId: integer("site_id").references(() => site.id, { onDelete: "set null" }),
+    // "up" | "down" | "unknown"
+    wanStatus: text("wan_status").notNull().default("unknown"),
+    isp: text("isp"),
+    latencyMs: integer("latency_ms"),
+    clientCount: integer("client_count"),
+    // False when the source can't list connected devices (UniFi cloud only gives counts).
+    clientsListed: boolean("clients_listed").notNull().default(true),
+    wanDownSince: timestamp("wan_down_since", { withTimezone: true }),
+    wanAlerted: boolean("wan_alerted").notNull().default(false),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("net_site_conn_ext_idx").on(t.connectionId, t.externalId)],
+);
+
+export const netDevice = pgTable(
+  "net_device",
+  {
+    id: serial("id").primaryKey(),
+    netSiteId: integer("net_site_id")
+      .notNull()
+      .references(() => netSite.id, { onDelete: "cascade" }),
+    externalId: text("external_id").notNull(),
+    mac: text("mac").notNull(),
+    name: text("name").notNull(),
+    model: text("model").notNull().default(""),
+    // "gateway" | "switch" | "ap" | "other"
+    kind: text("kind").notNull().default("other"),
+    ip: text("ip").notNull().default(""),
+    firmware: text("firmware").notNull().default(""),
+    online: boolean("online").notNull().default(true),
+    uptimeSec: integer("uptime_sec"),
+    uplinkMac: text("uplink_mac"),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
+    downSince: timestamp("down_since", { withTimezone: true }),
+    alerted: boolean("alerted").notNull().default(false),
+    assetId: integer("asset_id").references(() => asset.id, { onDelete: "set null" }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("net_device_site_mac_idx").on(t.netSiteId, t.mac), index("net_device_mac_idx").on(t.mac)],
+);
+
+export const netClient = pgTable(
+  "net_client",
+  {
+    id: serial("id").primaryKey(),
+    netSiteId: integer("net_site_id")
+      .notNull()
+      .references(() => netSite.id, { onDelete: "cascade" }),
+    mac: text("mac").notNull(),
+    name: text("name").notNull().default(""),
+    ip: text("ip").notNull().default(""),
+    wired: boolean("wired").notNull().default(false),
+    uplinkMac: text("uplink_mac"),
+    connectedAt: timestamp("connected_at", { withTimezone: true }),
+    online: boolean("online").notNull().default(true),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("net_client_site_mac_idx").on(t.netSiteId, t.mac), index("net_client_mac_idx").on(t.mac)],
+);
+
+// Outages that lasted long enough to alert on, and when they ended.
+export const netEvent = pgTable(
+  "net_event",
+  {
+    id: serial("id").primaryKey(),
+    netSiteId: integer("net_site_id")
+      .notNull()
+      .references(() => netSite.id, { onDelete: "cascade" }),
+    deviceId: integer("device_id").references(() => netDevice.id, { onDelete: "cascade" }),
+    // "device_down" | "device_up" | "wan_down" | "wan_up"
+    type: text("type").notNull(),
+    at: timestamp("at", { withTimezone: true }).notNull(),
+    data: jsonb("data").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+  },
+  (t) => [index("net_event_site_at_idx").on(t.netSiteId, t.at)],
+);

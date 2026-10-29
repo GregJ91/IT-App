@@ -5,6 +5,8 @@ import { Icon } from "@/components/icons";
 import { listAssets } from "@/lib/assets";
 import { requireIT } from "@/lib/session";
 import { stockFitting } from "@/lib/stock";
+import { connections, presenceFor } from "@/lib/network/queries";
+import { OnlineChip } from "@/components/net-bits";
 
 export const metadata = { title: "Printers" };
 
@@ -12,7 +14,8 @@ export default async function Printers({ searchParams }: { searchParams: Promise
   await requireIT();
   const sp = await searchParams;
   const printers = await listAssets({ printersOnly: true, q: sp.q });
-  const supplies = await Promise.all(printers.map((p) => stockFitting(p.model)));
+  const [supplies, presence] = await Promise.all([Promise.all(printers.map((p) => stockFitting(p.model))), presenceFor(printers.map((p) => p.macAddress))]);
+  const anyNetwork = presence.size > 0 || (await connections()).length > 0;
   return (
     <div className="page">
       <div className="page-head">
@@ -38,6 +41,7 @@ export default async function Printers({ searchParams }: { searchParams: Promise
               <thead>
                 <tr>
                   <th>Printer</th>
+                  {anyNetwork && <th>Network</th>}
                   <th>Model</th>
                   <th>IP address</th>
                   <th>MAC</th>
@@ -62,6 +66,17 @@ export default async function Printers({ searchParams }: { searchParams: Promise
                         </div>
                       )}
                     </td>
+                    {anyNetwork && (
+                      <td>
+                        {presence.get(p.macAddress) ? (
+                          <OnlineChip online={presence.get(p.macAddress)!.online} />
+                        ) : (
+                          <span className="muted" title={p.macAddress ? "UniFi hasn't seen this MAC address" : "Add its MAC address to match it"}>
+                            {p.macAddress ? "Not seen" : "No MAC"}
+                          </span>
+                        )}
+                      </td>
+                    )}
                     <td>{[p.make, p.model].filter(Boolean).join(" ") || "—"}</td>
                     <td style={{ whiteSpace: "nowrap" }}>
                       {p.ipAddress ? (
@@ -102,8 +117,8 @@ export default async function Printers({ searchParams }: { searchParams: Promise
         )}
       </section>
       <p className="muted" style={{ fontSize: ".8rem" }}>
-        Clicking an IP address opens the printer&apos;s own web page, which only works on the office network. Live status and toner levels from the printers
-        themselves need the app to be hosted where it can reach them.
+        Clicking an IP address opens the printer&apos;s own web page, which only works on the office network. &ldquo;Network&rdquo; shows whether UniFi can
+        see the printer, matched by MAC address. Toner levels read from the printers themselves need the app to be hosted where it can reach them.
       </p>
     </div>
   );

@@ -381,3 +381,26 @@ td input, td select { width: 100%; min-width: 90px; padding: 6px 8px; border: 1p
   .qr-label { border: 0; break-inside: avoid; }
   .sheet { justify-content: start; }
 }
+
+/* ---------- Phase 3: network ---------- */
+.net-sites { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.net-card { text-decoration: none; display: block; }
+.net-card:hover { border-color: var(--brand-line); }
+.net-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.net-stats > div { display: flex; flex-direction: column; gap: 2px; }
+.net-stats .v { font-size: 1.35rem; font-weight: 800; }
+.topo { display: flex; flex-direction: column; align-items: center; gap: 6px; overflow-x: auto; }
+.topo .tier { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.topo .link { width: 2px; height: 14px; background: var(--line); display: block; }
+.topo .node { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-2); text-decoration: none; font-size: .85rem; font-weight: 600; }
+.topo a.node:hover { border-color: var(--brand-line); }
+.topo .node small { display: block; font-weight: 400; color: var(--muted); font-size: .72rem; }
+.topo .node.down { border-color: var(--bad); color: var(--bad); background: color-mix(in srgb, var(--bad) 8%, var(--surface)); }
+.topo .node.down small { color: var(--bad); }
+.uptime { display: grid; grid-template-columns: repeat(14, 1fr); gap: 3px; height: 28px; }
+.uptime span { border-radius: 3px; background: var(--ok); }
+.uptime span.some { background: var(--warn); }
+.uptime span.down { background: var(--bad); }
+.uptime-axis { display: flex; justify-content: space-between; font-size: .72rem; color: var(--muted); }
+.net-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; text-decoration: none; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.net-row:last-child { border-bottom: 0; }

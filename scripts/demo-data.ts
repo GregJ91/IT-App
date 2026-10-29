@@ -199,6 +199,29 @@ await saveLicence(greg, null, { name: "Microsoft 365 Business Standard", supplie
 await saveLicence(greg, null, { name: "Sage 50 Accounts", supplier: "Sage", seats: 3, renewsOn: addDays(today, 140), costPence: 114000, notes: "" });
 await saveLicence(greg, null, { name: "gardenersdream.co.uk domain", supplier: "123-reg", seats: null, renewsOn: addDays(today, 61), costPence: 1499, notes: "" });
 
+// Network: the built-in example network, plus a little outage history for the charts.
+const [exampleNet] = await db.insert(schema.netConnection).values({ name: "Example network", kind: "example" }).returning();
+const { pollConnection } = await import("../src/lib/network/poll");
+await pollConnection(exampleNet);
+const netSites = await db.select().from(schema.netSite);
+const netSite = (name: string) => netSites.find((x) => x.name === name)!.id;
+const hoursAgo = (h: number) => new Date(Date.now() - h * 3600_000);
+await db.insert(schema.netEvent).values([
+  { netSiteId: netSite("Showroom"), type: "wan_down", at: hoursAgo(76), data: {} },
+  { netSiteId: netSite("Showroom"), type: "wan_up", at: hoursAgo(75.3), data: { downMs: 0.7 * 3600_000 } },
+  { netSiteId: netSite("Showroom"), type: "wan_down", at: hoursAgo(28), data: {} },
+  { netSiteId: netSite("Showroom"), type: "wan_up", at: hoursAgo(27.8), data: { downMs: 0.2 * 3600_000 } },
+  { netSiteId: netSite("Warehouse"), type: "wan_down", at: hoursAgo(200), data: {} },
+  { netSiteId: netSite("Warehouse"), type: "wan_up", at: hoursAgo(197.5), data: { downMs: 2.5 * 3600_000 } },
+]);
+const yard = await db.query.netDevice.findFirst({ where: eq(schema.netDevice.name, "AP Yard") });
+if (yard) {
+  await db.insert(schema.netEvent).values([
+    { netSiteId: yard.netSiteId, deviceId: yard.id, type: "device_down", at: hoursAgo(50), data: {} },
+    { netSiteId: yard.netSiteId, deviceId: yard.id, type: "device_up", at: hoursAgo(49), data: { downMs: 3600_000 } },
+  ]);
+}
+
 // Dates were moved back above, so work the deadlines out again from the history.
 await recomputeOpenTickets();
 console.info(`Demo data added: ${old.length + 7} jobs.`);

@@ -32,6 +32,7 @@ export default defineConfig({
       SLACK_API_BASE: "http://localhost:3199/api",
       SLACK_BOT_TOKEN: "xoxb-test-token",
       SLACK_CHANNEL: "C0ITJOBS",
+      NETWORK_POLL_SECONDS: "0",
       NEXT_TELEMETRY_DISABLED: "1",
     },
   },

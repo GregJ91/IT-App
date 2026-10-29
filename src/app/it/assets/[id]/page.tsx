@@ -10,6 +10,8 @@ import { config } from "@/lib/config";
 import { daysBetween, ukToday } from "@/lib/reminders";
 import { requireIT } from "@/lib/session";
 import { stockFitting } from "@/lib/stock";
+import { presenceFor } from "@/lib/network/queries";
+import { OnlineChip, sinceText } from "@/components/net-bits";
 import { getLookups } from "@/lib/tickets";
 import { ticketRef } from "@/lib/tickets-shared";
 import { deletePhotoAction } from "../actions";
@@ -22,7 +24,7 @@ function eventText(e: { type: string; data: Record<string, unknown>; actorName: 
   const d = e.data;
   switch (e.type) {
     case "created":
-      return `${who} added it to the inventory`;
+      return d.source === "UniFi" ? "Added automatically from UniFi" : `${who} added it to the inventory`;
     case "imported":
       return `${who} imported it from a spreadsheet`;
     case "edited":
@@ -47,7 +49,8 @@ export default async function AssetPage(props: { params: Promise<{ id: string }>
   const d = await getAsset(Number(id));
   if (!d) notFound();
   const a = d.a;
-  const [people, { sites }, toner] = await Promise.all([peopleOptions(), getLookups(), d.isPrinter ? stockFitting(a.model) : []]);
+  const [people, { sites }, toner, presence] = await Promise.all([peopleOptions(), getLookups(), d.isPrinter ? stockFitting(a.model) : [], presenceFor([a.macAddress])]);
+  const net = presence.get(a.macAddress) ?? null;
   const warrantyDays = a.warrantyUntil ? daysBetween(ukToday(), a.warrantyUntil) : null;
   const now = new Date();
   const facts: [string, React.ReactNode][] = [
@@ -212,6 +215,40 @@ export default async function AssetPage(props: { params: Promise<{ id: string }>
               {d.assignedTo && <CheckInForm id={a.id} sites={sites} siteId={a.siteId} />}
             </div>
           </section>
+          {a.macAddress && (
+            <section className="panel">
+              <div className="panel-head">
+                <h2>On the network</h2>
+                {net ? <OnlineChip online={net.online} label={["Connected", "Not connected"]} /> : null}
+              </div>
+              <div className="panel-body list">
+                {net ? (
+                  <>
+                    <div>
+                      <span className="muted">Where</span>
+                      <Link href={net.deviceId ? `/it/network/devices/${net.deviceId}` : `/it/network/${net.netSiteId}`}>
+                        {net.siteName}
+                        {net.via ? ` via ${net.via}` : ""}
+                      </Link>
+                    </div>
+                    {net.ip && (
+                      <div>
+                        <span className="muted">IP address now</span>
+                        <span className={`mono ${a.ipAddress && net.ip !== a.ipAddress ? "t-soon" : ""}`}>{net.ip}</span>
+                      </div>
+                    )}
+                    <div>
+                      <span className="muted">{net.online ? "Connected" : "Last seen"}</span>
+                      <span>{sinceText(net.online ? net.since : net.lastSeenAt, now)}</span>
+                    </div>
+                    {a.ipAddress && net.ip && net.ip !== a.ipAddress && <p className="note">UniFi sees it on {net.ip}, not the {a.ipAddress} saved here.</p>}
+                  </>
+                ) : (
+                  <p className="muted">Not seen by UniFi. {d.isPrinter ? "It may be off, unplugged, or on a site that isn't connected." : ""}</p>
+                )}
+              </div>
+            </section>
+          )}
           {d.isPrinter && (
             <section className="panel">
               <div className="panel-head">

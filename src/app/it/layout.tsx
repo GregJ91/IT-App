@@ -14,6 +14,7 @@ export default async function ITLayout({ children }: { children: React.ReactNode
     { href: "/it/assets", label: "Inventory", short: "Kit", icon: "box" },
     { href: "/it/stock", label: "Stock", icon: "layers" },
     { href: "/it/printers", label: "Printers", icon: "printer", tab: false },
+    { href: "/it/network", label: "Network", icon: "net", tab: false },
     { href: "/it/licences", label: "Licences", icon: "doc", tab: false },
     ...(u.role === "admin" ? [{ href: "/it/settings", label: "Settings", icon: "cog" as const, tab: false }] : []),
   ];

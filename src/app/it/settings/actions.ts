@@ -8,6 +8,9 @@ import { sendMail } from "@/lib/notify";
 import { sendTestMessage } from "@/lib/slack";
 import { validHours } from "@/lib/calendar";
 import { recomputeOpenTickets, saveSlaSettings } from "@/lib/sla-rules";
+import { pollConnection, readSource, saveNetSettings } from "@/lib/network/poll";
+import { encryptSecret } from "@/lib/network/secret";
+import { SourceError } from "@/lib/network/types";
 import { requireAdmin } from "@/lib/session";
 
 export type SettingsState = { error?: string; ok?: string; link?: string } | undefined;
@@ -202,4 +205,90 @@ export async function testSlack(_: SettingsState): Promise<SettingsState> {
   const admin = await requireAdmin();
   const res = await sendTestMessage(admin.name);
   return res.ok ? { ok: res.detail } : { error: res.detail };
+}
+
+/* ---------- Network (UniFi) ---------- */
+
+export async function addNetConnection(_: SettingsState, form: FormData): Promise<SettingsState> {
+  await requireAdmin();
+  const kind = String(form.get("kind"));
+  if (!["console", "cloud", "example"].includes(kind)) return { error: "Choose what you're connecting." };
+  const name = String(form.get("name") ?? "").trim().slice(0, 80) || (kind === "example" ? "Example network" : kind === "cloud" ? "UniFi cloud" : "UniFi console");
+  const url = kind === "example" ? "" : String(form.get("url") ?? "").trim().slice(0, 300);
+  const apiKey = kind === "example" ? "" : String(form.get("apiKey") ?? "").trim();
+  const trustCert = kind === "console" && form.get("trustCert") === "on";
+  if (kind === "console" && !url) return { error: "Add the console's address, e.g. https://192.168.1.1" };
+  if (kind !== "example" && !apiKey) return { error: "Paste the API key from UniFi." };
+  // Check it works before saving, so a typo doesn't sit there failing quietly.
+  try {
+    const snap = await readSource({ kind: kind as "console" | "cloud" | "example", url, apiKey, trustCert });
+    const [row] = await db.insert(schema.netConnection).values({ name, kind, url, apiKeyEnc: encryptSecret(apiKey), trustCert }).returning();
+    await pollConnection(row);
+    revalidatePath("/it/network", "layout");
+    return done(`Connected to ${name}: found ${snap.sites.length} site${snap.sites.length === 1 ? "" : "s"} and ${snap.sites.reduce((n, s) => n + s.devices.length, 0)} pieces of UniFi kit.`);
+  } catch (e) {
+    if (e instanceof SourceError) return { error: e.message };
+    throw e;
+  }
+}
+
+export async function checkNetConnection(_: SettingsState, form: FormData): Promise<SettingsState> {
+  await requireAdmin();
+  const conn = await db.query.netConnection.findFirst({ where: eq(schema.netConnection.id, Number(form.get("id"))) });
+  if (!conn) return { error: "Connection not found." };
+  const r = await pollConnection(conn);
+  revalidatePath("/it/network", "layout");
+  revalidatePath("/it/settings");
+  return r.ok ? { ok: `Working: ${r.sites} site${r.sites === 1 ? "" : "s"} updated.` } : { error: r.error };
+}
+
+export async function updateNetConnection(_: SettingsState, form: FormData): Promise<SettingsState> {
+  await requireAdmin();
+  const id = Number(form.get("id"));
+  const conn = await db.query.netConnection.findFirst({ where: eq(schema.netConnection.id, id) });
+  if (!conn) return { error: "Connection not found." };
+  const url = String(form.get("url") ?? conn.url).trim();
+  const newKey = String(form.get("apiKey") ?? "").trim();
+  const trustCert = conn.kind === "console" && form.get("trustCert") === "on";
+  await db
+    .update(schema.netConnection)
+    .set({ url, trustCert, ...(newKey ? { apiKeyEnc: encryptSecret(newKey) } : {}) })
+    .where(eq(schema.netConnection.id, id));
+  const r = await pollConnection({ ...conn, url, trustCert, apiKeyEnc: newKey ? encryptSecret(newKey) : conn.apiKeyEnc });
+  revalidatePath("/it/network", "layout");
+  return r.ok ? done("Saved and working.") : { error: `Saved, but: ${r.error}` };
+}
+
+export async function toggleNetConnection(form: FormData) {
+  await requireAdmin();
+  const id = Number(form.get("id"));
+  const conn = await db.query.netConnection.findFirst({ where: eq(schema.netConnection.id, id) });
+  if (conn) await db.update(schema.netConnection).set({ enabled: !conn.enabled }).where(eq(schema.netConnection.id, id));
+  revalidatePath("/it/settings");
+  revalidatePath("/it/network", "layout");
+}
+
+export async function removeNetConnection(form: FormData) {
+  await requireAdmin();
+  await db.delete(schema.netConnection).where(eq(schema.netConnection.id, Number(form.get("id"))));
+  revalidatePath("/it/settings");
+  revalidatePath("/it/network", "layout");
+}
+
+export async function mapNetSite(form: FormData) {
+  await requireAdmin();
+  await db
+    .update(schema.netSite)
+    .set({ siteId: Number(form.get("siteId")) || null })
+    .where(eq(schema.netSite.id, Number(form.get("netSiteId"))));
+  revalidatePath("/it/settings");
+  revalidatePath("/it/network", "layout");
+}
+
+export async function saveNetAlerts(_: SettingsState, form: FormData): Promise<SettingsState> {
+  await requireAdmin();
+  const minutes = Number(form.get("alertAfterMin"));
+  if (!Number.isInteger(minutes) || minutes < 1 || minutes > 120) return { error: "Choose between 1 and 120 minutes." };
+  await saveNetSettings({ alertAfterMin: minutes, autoTicket: form.get("autoTicket") === "on", addKitToInventory: form.get("addKit") === "on" });
+  return done("Saved.");
 }

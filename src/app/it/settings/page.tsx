@@ -4,10 +4,15 @@ import { inviteStatus, listInvites } from "@/lib/invites";
 import { requireAdmin } from "@/lib/session";
 import { formatMinutes } from "@/lib/sla";
 import { getLookups } from "@/lib/tickets";
-import { addRule, archiveListItem, cancelInvite, deleteRule, moveRule } from "./actions";
+import { addRule, archiveListItem, cancelInvite, deleteRule, mapNetSite, moveRule, removeNetConnection, toggleNetConnection } from "./actions";
 import { InviteForm, ListEditor, NewLinkButton, RoleSelect, SlackTest, SlaForm, WorkingHoursForm } from "./forms";
 import { getSlaSettings } from "@/lib/sla-rules";
 import { assetTypes } from "@/lib/assets";
+import { AutoSelect } from "@/components/auto-select";
+import { getNetSettings } from "@/lib/network/poll";
+import { connections } from "@/lib/network/queries";
+import { decryptSecret, hint } from "@/lib/network/secret";
+import { AddConnectionForm, CheckNowButton, EditConnection, NetAlertsForm } from "./network-forms";
 import { slackChannelName, slackMode } from "@/lib/slack";
 
 export const metadata = { title: "Settings" };
@@ -29,6 +34,8 @@ export default async function Settings() {
     getSlaSettings(),
   ]);
   const kitTypes = await assetTypes();
+  const [connRows, netSites, netSettings] = await Promise.all([connections(), db.select().from(schema.netSite).orderBy(schema.netSite.name), getNetSettings()]);
+  const conns = connRows.map(({ apiKeyEnc, ...c }) => ({ ...c, keyHint: hint(decryptSecret(apiKeyEnc)) }));
   const slack = slackMode();
   const pending = invites.filter((i) => inviteStatus(i) === "pending");
   const siteName = new Map(lookups.sites.map((s) => [s.id, s.name]));
@@ -199,6 +206,71 @@ export default async function Settings() {
           </select>
           <button className="btn primary">Add rule</button>
         </form>
+      </section>
+
+      <section className="panel" id="network">
+        <div className="panel-head">
+          <h2>Network (UniFi)</h2>
+          <span className="muted" style={{ fontSize: ".78rem" }}>Read-only</span>
+        </div>
+        <div className="panel-body stack" style={{ gap: 14 }}>
+          {conns.length === 0 && <p className="muted">Not connected. Nothing is read from your network until a connection is added here.</p>}
+          {conns.map((c) => (
+            <div key={c.id} className="setting" style={{ alignItems: "flex-start" }}>
+              <span style={{ minWidth: 0, flex: "1 1 260px" }}>
+                <strong>{c.name}</strong>{" "}
+                <span className="muted">· {c.kind === "console" ? "On-site console" : c.kind === "cloud" ? "UniFi cloud" : "Example network"}</span>
+                <br />
+                <span className="muted" style={{ fontSize: ".8rem" }}>
+                  {[c.url, c.keyHint && `key ${c.keyHint}`, c.lastOkAt ? `last worked ${c.lastOkAt.toLocaleString("en-GB", { timeZone: "Europe/London", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : "not read yet"]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+                {c.lastError && <span className="error" style={{ display: "block", marginTop: 6 }}>{c.lastError}</span>}
+              </span>
+              <span className="actions">
+                <span className={`chip ${!c.enabled ? "s-closed" : c.lastError ? "s-bad" : c.lastOkAt ? "s-ok" : "s-waiting"}`}>
+                  {!c.enabled ? "Off" : c.lastError ? "Problem" : c.lastOkAt ? "Working" : "Waiting"}
+                </span>
+                <CheckNowButton id={c.id} />
+                {c.kind !== "example" && <EditConnection id={c.id} url={c.url} trustCert={c.trustCert} isConsole={c.kind === "console"} />}
+                <form action={toggleNetConnection}>
+                  <input type="hidden" name="id" value={c.id} />
+                  <button className="btn small">{c.enabled ? "Turn off" : "Turn on"}</button>
+                </form>
+                <form action={removeNetConnection}>
+                  <input type="hidden" name="id" value={c.id} />
+                  <button className="btn small danger">Remove</button>
+                </form>
+              </span>
+            </div>
+          ))}
+          {netSites.length > 0 && (
+            <div>
+              <span className="label">Which site is which</span>
+              {netSites.map((n) => (
+                <form key={n.id} action={mapNetSite} className="setting">
+                  <input type="hidden" name="netSiteId" value={n.id} />
+                  <span>
+                    UniFi site <strong>{n.name}</strong>
+                  </span>
+                  <span className="actions">
+                    <AutoSelect name="siteId" defaultValue={n.siteId ?? ""} label={`Our site for ${n.name}`} className="filter">
+                      <option value="">Not one of ours</option>
+                      {lookups.sites.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </AutoSelect>
+                  </span>
+                </form>
+              ))}
+            </div>
+          )}
+          <NetAlertsForm alertAfterMin={netSettings.alertAfterMin} autoTicket={netSettings.autoTicket} addKit={netSettings.addKitToInventory} />
+          <AddConnectionForm />
+        </div>
       </section>
 
       <section className="panel">

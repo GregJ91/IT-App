@@ -4,7 +4,9 @@ A bespoke IT app for raising and handling IT jobs, managing inventory, keeping p
 
 ## Where we are
 
-**Phase 1 (tickets) is built and tested, using placeholder settings.** Slack notifications are built and tested against a stand-in Slack; they need a Slack app to go live (see `docs/slack-setup.md`). Raising jobs from Slack is still to come.
+**Phases 1 to 3 are built and tested, using placeholder settings.** Phase 3 (network) is tested against an example network and a stand-in UniFi server; nothing real is connected yet.
+
+**Phase 1 (tickets):** Slack notifications are built and tested against a stand-in Slack; they need a Slack app to go live (see `docs/slack-setup.md`). Raising jobs from Slack is still to come.
 
 `design/prototype.html` is the clickable design prototype with example data. The real app follows its **E · Ocean** style.
 
@@ -43,6 +45,23 @@ A bespoke IT app for raising and handling IT jobs, managing inventory, keeping p
 - **Tickets link to kit**, so an item's page lists its jobs and a ticket shows which item it's about.
 - **Spreadsheet import** (CSV) for kit and stock, with a row-by-row check before anything is saved. Templates are on the import page.
 
+## What Phase 3 does (network, from UniFi)
+
+- **Connect** in Settings → Network (UniFi). Three kinds of connection:
+  - **On-site console** (UDM, UCG, Cloud Key…): uses the console's own API key (UniFi Network 9 or newer: Settings → Control Plane → Integrations). Gives kit, uplinks and every connected device, but the app has to run on that network or reach it over a VPN.
+  - **UniFi cloud** (unifi.ui.com API key): works from anywhere and reports each site's internet line and latency, but only a *count* of connected devices.
+  - **Example network**: three made-up sites to try the pages without any kit. Remove it before connecting the real thing.
+  The key is checked before anything is saved, problems are explained in plain words (wrong key, can't reach the console, certificate), and keys are stored encrypted and never sent to the browser. IT Hub only reads; it never changes settings or restarts anything.
+- **Network overview**: a card per site with internet status, kit online, connected devices, latency and anything offline, plus a list of recent outages. Refresh now reads UniFi straight away.
+- **Site page**: a map from internet → gateway → switches → access points, 14 days of internet uptime, the kit list, and connected devices with what each one is plugged into or on Wi-Fi through. Search by name, IP or MAC.
+- **Device page**: model, IP, MAC, firmware, uptime, what it's connected to, what's connected through it, and its outages.
+- **Find a device** across every site by name, IP or MAC.
+- **Alerts**: when kit or a site's internet is down for longer than the alert delay (3 minutes by default, so blips are ignored), IT gets an email and a Slack message, and another when it comes back. Optionally a P1 ticket is raised for an internet outage.
+- **Inventory link**: gateways, switches and access points are added to the inventory automatically (matched by MAC, so existing items are reused). Any inventory item with a MAC address, such as a printer, shows whether it's on the network now, and the Printers page has an Online / Not seen column. The dashboard has a Network panel.
+- **Polling**: the server reads every connection each `NETWORK_POLL_SECONDS` (default 60; 0 turns it off). Where the host can't keep a timer running, a scheduler can call `/api/cron/network` with `CRON_SECRET` instead.
+
+The UniFi adapters follow UniFi's published APIs but haven't met real kit yet. Expect a small fix or two when the first real console or cloud key is connected.
+
 ## Placeholders to replace
 
 | What | Placeholder now | Where to change it |
@@ -57,6 +76,7 @@ A bespoke IT app for raising and handling IT jobs, managing inventory, keeping p
 | Kit types | Laptop, Desktop, Monitor, Printer, Label printer, Scanner, Raspberry Pi, Phone, Tablet, Network, Other | Settings → Kit types |
 | Microsoft / Google / Slack sign-in | Off until keys are added | `.env` |
 | Email sending | Printed to the server log | `SMTP_*` in `.env` |
+| UniFi | Not connected | Settings → Network (UniFi) |
 | Slack | Off until a Slack app is connected | `SLACK_BOT_TOKEN` and `SLACK_CHANNEL` in `.env` ([setup steps](docs/slack-setup.md)) |
 
 ## Running it
@@ -81,7 +101,7 @@ npm test                      # unit and database tests (uses the ithub_test dat
 npm run build && npm run test:e2e   # end-to-end in a browser (uses the ithub_e2e database)
 ```
 
-The end-to-end run walks through the whole story: an admin joins by invite and sets up an authenticator, a member of staff raises a job with a screenshot on a phone, IT replies, adds a private note, logs time and resolves it, the requester sees the reply but not the note and rates it, signing in again asks for a code, and the admin invites a tech and changes SLA targets. It also checks every message that would have gone to Slack, using a stand-in Slack server (`tests/fake-slack.ts`).
+The end-to-end run walks through the whole story: an admin joins by invite and sets up an authenticator, a member of staff raises a job with a screenshot on a phone, IT replies, adds a private note, logs time and resolves it, the requester sees the reply but not the note and rates it, signing in again asks for a code, and the admin invites a tech and changes SLA targets. It also checks every message that would have gone to Slack, using a stand-in Slack server (`tests/fake-slack.ts`). The network tests use a stand-in UniFi server (`tests/fake-unifi.ts`) that answers like a console and the UniFi cloud: a wrong key, connecting, the site/device/search pages, a printer showing as online, kit added to the inventory, an access point dropping off and coming back, and the example network on the dashboard and a phone.
 
 ### Code map
 
@@ -89,6 +109,7 @@ The end-to-end run walks through the whole story: an admin joins by invite and s
 - `src/lib/auth.ts`: sign-in setup (Better Auth). `src/lib/session.ts`: who's signed in and the IT page guard.
 - `src/lib/tickets.ts`: everything that creates, reads and changes tickets. `src/lib/sla.ts` and `src/lib/assignment.ts`: SLA maths and assignment rules.
 - `src/lib/invites.ts`: IT invites. Only a hash of each link is stored.
+- `src/lib/network/`: UniFi. `sources/` reads a console, the cloud or the example network into one shape; `poll.ts` saves it, debounces outages and sends alerts; `queries.ts` feeds the pages.
 - `src/app/`: pages. `/my/*` is the staff portal, `/it/*` the IT side, `/invite/*`, `/setup-2fa` and `/verify` the IT sign-in steps.
 
 ## Decisions so far
@@ -113,7 +134,7 @@ The end-to-end run walks through the whole story: an admin joins by invite and s
 0. **Design**: done (E · Ocean)
 1. **Tickets**: built and tested with placeholders, including Slack notifications. Raising jobs from Slack still to add.
 2. **Inventory + printers**: built and tested. Live printer status (SNMP) waits for hosting on the office network.
-3. **Networking**: UniFi integration per site
+3. **Networking**: built and tested against an example network and a stand-in UniFi. Waiting for real console or cloud keys.
 4. **WhatsApp and extras**
 
 Each phase is tested before moving to the next.

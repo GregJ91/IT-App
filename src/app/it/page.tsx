@@ -5,6 +5,7 @@ import { requireIT } from "@/lib/session";
 import { dashboard } from "@/lib/tickets";
 import { after } from "next/server";
 import { comingUp, sendDailyReminders } from "@/lib/reminders";
+import { networkSummary } from "@/lib/network/queries";
 
 export const metadata = { title: "Dashboard" };
 
@@ -18,7 +19,7 @@ const dow = new Intl.DateTimeFormat("en-GB", { weekday: "narrow", timeZone: "UTC
 export default async function Dashboard() {
   const u = await requireIT();
   const now = new Date();
-  const [d, soon] = await Promise.all([dashboard(u.id, now), comingUp(now)]);
+  const [d, soon, net] = await Promise.all([dashboard(u.id, now), comingUp(now), networkSummary()]);
   // The first IT visit of the day sends the daily reminders (after the page is sent).
   after(() => sendDailyReminders().catch((e) => console.error("[reminders]", e)));
   const total = d.perDay.reduce((n, x) => n + x.n, 0);
@@ -80,6 +81,40 @@ export default async function Dashboard() {
           )}
         </section>
         <aside className="stack">
+        {net && (
+          <section className="panel">
+            <div className="panel-head">
+              <h2>Network</h2>
+              <Link href="/it/network" className="muted" style={{ fontSize: ".82rem" }}>
+                All sites
+              </Link>
+            </div>
+            <div className="panel-body" style={{ paddingBlock: 6 }}>
+              {net.map((s) => (
+                <Link key={s.id} href={`/it/network/${s.id}`} className="net-row">
+                  <span>
+                    <strong>{s.name}</strong>
+                    <span className="muted" style={{ fontSize: ".78rem" }}>
+                      {s.clients != null ? ` · ${s.clients} connected` : ""}
+                      {s.latencyMs != null ? ` · ${s.latencyMs} ms` : ""}
+                    </span>
+                  </span>
+                  {s.stale ? (
+                    <span className="chip s-closed">Not updated</span>
+                  ) : s.wan === "down" ? (
+                    <span className="chip s-bad">Internet down</span>
+                  ) : s.offline ? (
+                    <span className="chip s-waiting">
+                      {s.offline} device{s.offline === 1 ? "" : "s"} down
+                    </span>
+                  ) : (
+                    <span className="chip s-ok">All up</span>
+                  )}
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
         <section className="panel">
           <div className="panel-head">
             <h2>Coming up</h2>
