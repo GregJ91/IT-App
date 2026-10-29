@@ -5,7 +5,7 @@ import { RaiseForm } from "./raise-form";
 
 export const metadata = { title: "Raise a job" };
 
-export default async function Raise({ searchParams }: { searchParams: Promise<{ about?: string }> }) {
+export default async function Raise({ searchParams }: { searchParams: Promise<{ about?: string; title?: string }> }) {
   const u = await requireUser();
   const sp = await searchParams;
   const [{ sites, categories, policies }, item] = await Promise.all([getLookups(), sp.about ? findAssetByTag(sp.about) : null]);
@@ -22,7 +22,7 @@ export default async function Raise({ searchParams }: { searchParams: Promise<{ 
           <p className="sub">Tell IT what&apos;s wrong. Screenshots help us fix it faster.</p>
         </div>
       </div>
-      <RaiseForm sites={sites} categories={categories} policies={policies} phone={u.phone ?? ""} about={about} />
+      <RaiseForm sites={sites} categories={categories} policies={policies} phone={u.phone ?? ""} about={about} title={sp.title?.slice(0, 160)} />
     </div>
   );
 }

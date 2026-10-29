@@ -504,3 +504,107 @@ export const netEvent = pgTable(
   },
   (t) => [index("net_event_site_at_idx").on(t.netSiteId, t.at)],
 );
+
+/* ---------- Phase 4: starters and leavers ---------- */
+
+// The standard checklist for every starter or leaver. Copied onto each one when it's created.
+export const peopleTemplateTask = pgTable("people_template_task", {
+  id: serial("id").primaryKey(),
+  // "starter" | "leaver"
+  kind: text("kind").notNull(),
+  title: text("title").notNull(),
+  sort: integer("sort").notNull().default(0),
+  archived: boolean("archived").notNull().default(false),
+});
+
+export const peopleChange = pgTable(
+  "people_change",
+  {
+    id: serial("id").primaryKey(),
+    // "starter" | "leaver"
+    kind: text("kind").notNull(),
+    name: text("name").notNull(),
+    email: text("email").notNull().default(""),
+    // Their IT Hub account, once there is one (matched by email).
+    userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+    jobTitle: text("job_title").notNull().default(""),
+    siteId: integer("site_id").references(() => site.id, { onDelete: "set null" }),
+    manager: text("manager").notNull().default(""),
+    // First day for a starter, last day for a leaver.
+    date: date("date", { mode: "string" }).notNull(),
+    notes: text("notes").notNull().default(""),
+    // "open" | "done" | "cancelled"
+    status: text("status").notNull().default("open"),
+    createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    doneAt: timestamp("done_at", { withTimezone: true }),
+  },
+  (t) => [index("people_change_status_date_idx").on(t.status, t.date)],
+);
+
+export const peopleTask = pgTable(
+  "people_task",
+  {
+    id: serial("id").primaryKey(),
+    changeId: integer("change_id")
+      .notNull()
+      .references(() => peopleChange.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    // "task" | "kit_out" (hand it to a starter) | "kit_back" (collect it from a leaver)
+    kind: text("kind").notNull().default("task"),
+    assetId: integer("asset_id").references(() => asset.id, { onDelete: "set null" }),
+    sort: integer("sort").notNull().default(0),
+    doneAt: timestamp("done_at", { withTimezone: true }),
+    doneById: text("done_by_id").references(() => user.id, { onDelete: "set null" }),
+  },
+  (t) => [index("people_task_change_idx").on(t.changeId)],
+);
+
+/* ---------- Phase 4: help articles ---------- */
+
+export const helpArticle = pgTable(
+  "help_article",
+  {
+    id: serial("id").primaryKey(),
+    slug: text("slug").notNull().unique(),
+    title: text("title").notNull(),
+    // One line shown in lists and suggestions.
+    summary: text("summary").notNull().default(""),
+    // Simple Markdown: headings, lists, bold, links, screenshots.
+    body: text("body").notNull().default(""),
+    categoryId: integer("category_id").references(() => category.id, { onDelete: "set null" }),
+    published: boolean("published").notNull().default(false),
+    views: integer("views").notNull().default(0),
+    createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),
+    updatedById: text("updated_by_id").references(() => user.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("help_article_search_idx").using("gin", sql`to_tsvector('english', ${t.title} || ' ' || ${t.summary} || ' ' || ${t.body})`)],
+);
+
+// One answer per person per article. "solvedJob" means it fixed things while they were raising a job.
+export const helpFeedback = pgTable(
+  "help_feedback",
+  {
+    id: serial("id").primaryKey(),
+    articleId: integer("article_id")
+      .notNull()
+      .references(() => helpArticle.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    helpful: boolean("helpful").notNull(),
+    solvedJob: boolean("solved_job").notNull().default(false),
+    at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("help_feedback_article_user_idx").on(t.articleId, t.userId)],
+);
+
+export const helpImage = pgTable("help_image", {
+  id: serial("id").primaryKey(),
+  storageKey: text("storage_key").notNull(),
+  mimeType: text("mime_type").notNull(),
+  uploadedById: text("uploaded_by_id").references(() => user.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});

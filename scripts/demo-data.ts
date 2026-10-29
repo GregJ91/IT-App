@@ -175,7 +175,7 @@ const kit = (name: string, type: string, o: Partial<AssetInput>): AssetInput => 
 });
 const dell = await createAsset(greg, kit("Dell Latitude 5440", "Laptop", { make: "Dell", model: "Latitude 5440", serial: "J7H2XK3", siteId: sites["Head Office"], location: "Accounts", purchaseDate: "2024-03-14", purchaseCostPence: 84900, supplier: "Dell", warrantyUntil: "2027-03-14" }));
 await checkOut(greg, dell.id, { userId: mark.id, name: "" }, "with charger and dock");
-await createAsset(greg, kit("Lenovo ThinkPad E14", "Laptop", { make: "Lenovo", model: "ThinkPad E14", serial: "PF4KQ21", status: "spare", siteId: sites["Head Office"], location: "IT cupboard", purchaseDate: "2023-11-02", purchaseCostPence: 62900, supplier: "Insight", warrantyUntil: addDays(today, 9) }));
+const thinkpad = await createAsset(greg, kit("Lenovo ThinkPad E14", "Laptop", { make: "Lenovo", model: "ThinkPad E14", serial: "PF4KQ21", status: "spare", siteId: sites["Head Office"], location: "IT cupboard", purchaseDate: "2023-11-02", purchaseCostPence: 62900, supplier: "Insight", warrantyUntil: addDays(today, 9) }));
 const m507 = await createAsset(greg, kit("Dispatch laser", "Printer", { make: "HP", model: "LaserJet M507", serial: "PHBQ71830", siteId: sites.Warehouse, location: "Dispatch", ipAddress: "10.20.1.31", macAddress: "3C:52:82:1A:7F:04", purchaseDate: "2024-06-30", purchaseCostPence: 41250, supplier: "Insight", warrantyUntil: "2027-06-30" }));
 await checkOut(greg, m507.id, { userId: null, name: "Dispatch" });
 const zebra = await createAsset(greg, kit("Dispatch bench 2 labels", "Label printer", { make: "Zebra", model: "ZD421", serial: "D4J212905", status: "repair", siteId: sites.Warehouse, location: "Dispatch bench 2", ipAddress: "10.20.1.45", macAddress: "00:07:4D:9E:12:B3", warrantyUntil: "2027-01-11" }));
@@ -221,6 +221,34 @@ if (yard) {
     { netSiteId: yard.netSiteId, deviceId: yard.id, type: "device_up", at: hoursAgo(49), data: { downMs: 3600_000 } },
   ]);
 }
+
+// Starters and leavers.
+const { createChange, getChange, setTaskDone } = await import("../src/lib/people");
+const phone = await createAsset(greg, kit("iPhone 13", "Phone", { make: "Apple", model: "iPhone 13", status: "spare", siteId: sites.Warehouse, location: "IT drawer" }));
+const jamie = await createChange(greg, { kind: "starter", name: "Jamie Fox", email: "jamie.fox@gardenersdream.co.uk", jobTitle: "Dispatch lead", siteId: sites.Warehouse ?? null, manager: "Dave K", date: addDays(today, 4), notes: "Needs the dispatch label printer and a handheld scanner." }, [thinkpad.id, phone.id]);
+for (const t of (await getChange(jamie.id))!.tasks.slice(0, 3)) await setTaskDone(sam, t.id, true);
+const leaver = await createChange(greg, { kind: "leaver", name: "Mark D", email: mark.email, userId: mark.id, jobTitle: "Accounts assistant", siteId: sites["Head Office"] ?? null, manager: "Greg J", date: addDays(today, 9), notes: "Emails to go to Priya." });
+await setTaskDone(ali, (await getChange(leaver.id))!.tasks[0].id, true);
+
+// Help articles.
+const { saveArticle, recordFeedback } = await import("../src/lib/help");
+const articles = [
+  { title: "Label printer printing blank labels", summary: "Reload the roll and recalibrate the Zebra", cat: "Printer", body: "This usually means the labels have slipped off the sensor.\n\n## Fix it\n\n1. Open the lid and check the roll sits under both green guides\n2. Close the lid until it clicks\n3. Hold the **feed** button until the light flashes twice, then let go\n\nIt feeds a few labels while it measures them. Try your print again.\n\n> Still blank? The print head may need cleaning. Raise a job and IT will sort it." },
+  { title: "Connect to the office Wi-Fi", summary: "Which network to choose at each site", cat: "Network", body: "## Staff laptops and phones\n\nChoose **GD-Staff**. The password is on the card in the IT cupboard; ask your manager if you can't find it.\n\n## Visitors\n\nUse **GD-Guest**. It only reaches the internet, not our printers or files.\n\n> Wi-Fi in the Showroom back office is weaker. Sit nearer the door if it drops." },
+  { title: "Scan to email from the Accounts MFP", summary: "Send a scan to yourself in four taps", cat: "Printer", body: "1. Put the pages face up in the top tray\n2. Tap **Scanner** on the screen\n3. Tap **Me** to send it to your own email\n4. Tap **Start**\n\nThe scan arrives as a PDF within a minute. Check your junk folder the first time." },
+  { title: "Change your Windows password", summary: "Do it while you're in the office or on the VPN", cat: "Software", body: "Press **Ctrl + Alt + Delete** and choose **Change a password**.\n\nAfterwards, Sage and Outlook will ask for the new one. If Sage won't accept it, sign out of Windows and back in." },
+];
+for (const [i, a] of articles.entries()) {
+  const row = await saveArticle(i % 2 ? ali : sam, null, { title: a.title, summary: a.summary, body: a.body, categoryId: cats[a.cat] ?? null, published: true });
+  await db.update(schema.helpArticle).set({ views: [41, 27, 12, 33][i] }).where(eq(schema.helpArticle.id, row.id));
+  if (i === 0) {
+    await recordFeedback(dave.id, row.id, true, true);
+    await recordFeedback(josh.id, row.id, true, true);
+    await recordFeedback(hannah.id, row.id, false);
+  }
+  if (i === 1) await recordFeedback(emma.id, row.id, true);
+}
+await saveArticle(sam, null, { title: "Set up the VPN at home", summary: "", body: "", categoryId: cats.Network ?? null, published: false });
 
 // Dates were moved back above, so work the deadlines out again from the history.
 await recomputeOpenTickets();

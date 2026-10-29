@@ -4,6 +4,7 @@ import { db, schema } from "@/db";
 import { localParts } from "./calendar";
 import { link, sendMail } from "./notify";
 import { esc, postToChannel, slackMode } from "./slack";
+import { upcomingChanges } from "./people";
 import { listStock } from "./stock";
 
 const { asset, licence, appSetting, user } = schema;
@@ -30,12 +31,13 @@ export type ComingUp = {
   warranties: { id: number; tag: string; name: string; date: string; days: number }[];
   licences: { id: number; name: string; date: string; days: number; seats: number | null }[];
   lowStock: { id: number; name: string; quantity: number; minQuantity: number }[];
+  people: Awaited<ReturnType<typeof upcomingChanges>>;
 };
 
 export async function comingUp(now = new Date(), days = REMINDER_DAYS): Promise<ComingUp> {
   const today = ukToday(now);
   const until = addDays(today, days);
-  const [w, l, s] = await Promise.all([
+  const [w, l, s, people] = await Promise.all([
     db
       .select({ id: asset.id, tag: asset.tag, name: asset.name, date: asset.warrantyUntil })
       .from(asset)
@@ -47,11 +49,13 @@ export async function comingUp(now = new Date(), days = REMINDER_DAYS): Promise<
       .where(and(eq(licence.archived, false), lte(licence.renewsOn, until)))
       .orderBy(asc(licence.renewsOn)),
     listStock({ lowOnly: true }),
+    upcomingChanges(now, 14),
   ]);
   return {
     warranties: w.map((x) => ({ ...x, date: x.date!, days: daysBetween(today, x.date!) })),
     licences: l.map((x) => ({ ...x, date: x.date!, days: daysBetween(today, x.date!) })),
     lowStock: s.map((x) => ({ id: x.id, name: x.name, quantity: x.quantity, minQuantity: x.minQuantity })),
+    people,
   };
 }
 
@@ -71,7 +75,10 @@ export async function sendDailyReminders(now = new Date()) {
   const soon = (d: number) => d <= 1 || d === 7 || d === 14;
   const warranties = c.warranties.filter((x) => soon(x.days));
   const licences = c.licences.filter((x) => soon(x.days) || x.days < 0);
+  // Starters and leavers with work left: a week before, the day before, on the day, and every day after.
+  const people = c.people.filter((x) => x.done < x.total && (x.days <= 1 || x.days === 7));
   const lines = [
+    ...people.map((x) => `${x.kind === "starter" ? "Starter" : "Leaver"} ${x.name} ${x.kind === "starter" ? "starts" : "leaves"} ${when(x.days)}: ${x.total - x.done} of ${x.total} jobs left`),
     ...licences.map((x) => `Licence ${x.days < 0 ? "was due to renew" : "renews"} ${when(x.days)}: ${x.name} (${x.date})`),
     ...warranties.map((x) => `Warranty ends ${when(x.days)}: ${x.tag} ${x.name} (${x.date})`),
     ...c.lowStock.map((x) => `Low stock: ${x.name}, ${x.quantity} left (minimum ${x.minQuantity})`),

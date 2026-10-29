@@ -1,4 +1,5 @@
 "use server";
+import { addTemplateTask, PeopleError, removeTemplateTask } from "@/lib/people";
 import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -291,4 +292,25 @@ export async function saveNetAlerts(_: SettingsState, form: FormData): Promise<S
   if (!Number.isInteger(minutes) || minutes < 1 || minutes > 120) return { error: "Choose between 1 and 120 minutes." };
   await saveNetSettings({ alertAfterMin: minutes, autoTicket: form.get("autoTicket") === "on", addKitToInventory: form.get("addKit") === "on" });
   return done("Saved.");
+}
+
+/* ---------- Starter and leaver checklists ---------- */
+
+export async function addChecklistTask(_: SettingsState, form: FormData): Promise<SettingsState> {
+  const admin = await requireAdmin();
+  const kind = form.get("kind") === "leaver" ? "leaver" : "starter";
+  try {
+    await addTemplateTask(admin, kind, String(form.get("title") ?? ""));
+  } catch (e) {
+    if (e instanceof PeopleError) return { error: e.message };
+    throw e;
+  }
+  revalidatePath("/it/settings");
+  return { ok: "Added. New starters and leavers get it from now on." };
+}
+
+export async function removeChecklistTask(form: FormData) {
+  const admin = await requireAdmin();
+  await removeTemplateTask(admin, Number(form.get("id")));
+  revalidatePath("/it/settings");
 }

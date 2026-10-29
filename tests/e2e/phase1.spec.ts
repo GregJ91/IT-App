@@ -176,12 +176,12 @@ test("an admin invites a tech and changes the SLA targets", async () => {
   await expect(page.getByLabel("P3 counts")).toHaveValue("hours");
 
   // Winter hours: 7am to 6pm, still every day.
-  await page.getByLabel("From").fill("07:00");
-  await page.getByLabel("Until").fill("18:00");
+  await page.getByLabel("From", { exact: true }).fill("07:00");
+  await page.getByLabel("Until", { exact: true }).fill("18:00");
   await page.getByRole("button", { name: "Save working hours" }).click();
   await expect(page.getByText(/Saved\. Deadlines on \d+ open jobs? have been updated\./)).toBeVisible();
   await page.reload();
-  await expect(page.getByLabel("From")).toHaveValue("07:00");
+  await expect(page.getByLabel("From", { exact: true })).toHaveValue("07:00");
   await shot(page, "08-settings-desktop");
 });
 

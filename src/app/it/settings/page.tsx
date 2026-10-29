@@ -4,8 +4,8 @@ import { inviteStatus, listInvites } from "@/lib/invites";
 import { requireAdmin } from "@/lib/session";
 import { formatMinutes } from "@/lib/sla";
 import { getLookups } from "@/lib/tickets";
-import { addRule, archiveListItem, cancelInvite, deleteRule, mapNetSite, moveRule, removeNetConnection, toggleNetConnection } from "./actions";
-import { InviteForm, ListEditor, NewLinkButton, RoleSelect, SlackTest, SlaForm, WorkingHoursForm } from "./forms";
+import { addRule, archiveListItem, removeChecklistTask, cancelInvite, deleteRule, mapNetSite, moveRule, removeNetConnection, toggleNetConnection } from "./actions";
+import { ChecklistEditor, InviteForm, ListEditor, NewLinkButton, RoleSelect, SlackTest, SlaForm, WorkingHoursForm } from "./forms";
 import { getSlaSettings } from "@/lib/sla-rules";
 import { assetTypes } from "@/lib/assets";
 import { AutoSelect } from "@/components/auto-select";
@@ -14,6 +14,7 @@ import { connections } from "@/lib/network/queries";
 import { decryptSecret, hint } from "@/lib/network/secret";
 import { AddConnectionForm, CheckNowButton, EditConnection, NetAlertsForm } from "./network-forms";
 import { slackChannelName, slackMode } from "@/lib/slack";
+import { templateTasks } from "@/lib/people";
 
 export const metadata = { title: "Settings" };
 
@@ -33,7 +34,7 @@ export default async function Settings() {
     db.$count(schema.user, inArray(schema.user.role, ["staff"])),
     getSlaSettings(),
   ]);
-  const kitTypes = await assetTypes();
+  const [kitTypes, checklist] = await Promise.all([assetTypes(), templateTasks()]);
   const [connRows, netSites, netSettings] = await Promise.all([connections(), db.select().from(schema.netSite).orderBy(schema.netSite.name), getNetSettings()]);
   const conns = connRows.map(({ apiKeyEnc, ...c }) => ({ ...c, keyHint: hint(decryptSecret(apiKeyEnc)) }));
   const slack = slackMode();
@@ -319,6 +320,11 @@ export default async function Settings() {
         <ListEditor kind="site" title="Sites" items={lookups.sites} archive={archiveListItem} />
         <ListEditor kind="category" title="Job categories" items={lookups.categories} archive={archiveListItem} />
         <ListEditor kind="type" title="Kit types" items={kitTypes} archive={archiveListItem} />
+      </div>
+
+      <div className="grid cols-2" style={{ alignItems: "start" }} id="checklists">
+        <ChecklistEditor kind="starter" items={checklist.filter((t) => t.kind === "starter")} remove={removeChecklistTask} />
+        <ChecklistEditor kind="leaver" items={checklist.filter((t) => t.kind === "leaver")} remove={removeChecklistTask} />
       </div>
     </div>
   );

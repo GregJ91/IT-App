@@ -1,7 +1,7 @@
 "use client";
 import { useActionState, useEffect, useRef } from "react";
 import { CopyButton } from "@/components/copy-button";
-import { addListItem, changeRole, newInviteLink, renameListItem, saveSla, saveWorkingHours, sendInvite, testSlack, type SettingsState } from "./actions";
+import { addChecklistTask, addListItem, changeRole, newInviteLink, renameListItem, saveSla, saveWorkingHours, sendInvite, testSlack, type SettingsState } from "./actions";
 
 function Msg({ s }: { s: SettingsState }) {
   if (!s) return null;
@@ -264,5 +264,44 @@ export function WorkingHoursForm({ hours, pause }: { hours: { start: string; end
         </button>
       </div>
     </form>
+  );
+}
+
+export function ChecklistEditor(props: { kind: "starter" | "leaver"; items: { id: number; title: string }[]; remove: (f: FormData) => Promise<void> }) {
+  const [state, action, pending] = useActionState<SettingsState, FormData>(addChecklistTask, undefined);
+  const form = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    if (state?.ok) form.current?.reset();
+  }, [state]);
+  return (
+    <section className="panel">
+      <div className="panel-head">
+        <h2>{props.kind === "starter" ? "Starter checklist" : "Leaver checklist"}</h2>
+      </div>
+      <div className="panel-body stack" style={{ gap: 8 }}>
+        <div>
+          {props.items.map((i) => (
+            <form key={i.id} action={props.remove} className="setting">
+              <input type="hidden" name="id" value={i.id} />
+              <span>{i.title}</span>
+              <button className="btn small" aria-label={`Remove: ${i.title}`}>
+                Remove
+              </button>
+            </form>
+          ))}
+        </div>
+        <form ref={form} action={action} className="actions">
+          <input type="hidden" name="kind" value={props.kind} />
+          <input className="input" name="title" placeholder="Add a task" aria-label={`New ${props.kind} task`} maxLength={200} style={{ flex: 1, minWidth: 0 }} />
+          <button className="btn" disabled={pending}>
+            Add
+          </button>
+        </form>
+        <Msg s={state} />
+        <p className="muted" style={{ fontSize: ".78rem" }}>
+          Copied onto each new {props.kind}. Kit is added separately. Changes don&apos;t affect people already added.
+        </p>
+      </div>
+    </section>
   );
 }

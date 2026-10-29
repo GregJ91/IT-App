@@ -121,6 +121,17 @@ export default async function Dashboard() {
             <span className="muted" style={{ fontSize: ".78rem" }}>Next 30 days</span>
           </div>
           <div className="panel-body list">
+            {soon.people.map((p) => (
+              <div key={`p${p.id}`}>
+                <Link href={`/it/people/${p.id}`}>
+                  {p.kind === "starter" ? "Starter" : "Leaver"} · {p.name}{" "}
+                  <span className="muted num">
+                    {p.done}/{p.total}
+                  </span>
+                </Link>
+                <span className={p.days < 0 ? "t-late" : p.days <= 2 ? "t-soon" : "muted"}>{dayText(p.days)}</span>
+              </div>
+            ))}
             {soon.lowStock.map((s) => (
               <div key={`s${s.id}`}>
                 <Link href={`/it/stock/${s.id}`}>Low stock · {s.name}</Link>
@@ -143,8 +154,8 @@ export default async function Dashboard() {
                 <span className={w.days <= 7 ? "t-soon" : "muted"}>{w.days === 0 ? "Today" : `${w.days} days`}</span>
               </div>
             ))}
-            {soon.lowStock.length + soon.licences.length + soon.warranties.length === 0 && (
-              <p className="muted">Nothing running low or expiring in the next 30 days.</p>
+            {soon.people.length + soon.lowStock.length + soon.licences.length + soon.warranties.length === 0 && (
+              <p className="muted">No starters or leavers, and nothing running low or expiring soon.</p>
             )}
           </div>
         </section>
@@ -175,4 +186,9 @@ export default async function Dashboard() {
       </div>
     </div>
   );
+}
+
+function dayText(days: number) {
+  if (days < 0) return `${-days} day${days === -1 ? "" : "s"} ago`;
+  return days === 0 ? "Today" : days === 1 ? "Tomorrow" : `${days} days`;
 }

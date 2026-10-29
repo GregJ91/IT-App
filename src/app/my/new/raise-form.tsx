@@ -1,16 +1,33 @@
 "use client";
-import { useActionState } from "react";
+import Link from "next/link";
+import { useActionState, useState } from "react";
 import { raiseTicket, type ActionState } from "@/app/actions-tickets";
 import { FilePicker } from "@/components/file-picker";
 import { PRIORITY_HELP } from "@/lib/tickets-shared";
+import { HelpSuggestions } from "./help-suggestions";
 
 type Opt = { id: number; name: string };
 
 type About = { tag: string; name: string; siteId: number | null; location: string; categoryId: number | null };
 
-export function RaiseForm(props: { sites: Opt[]; categories: Opt[]; policies: { priority: number; label: string }[]; phone: string; about?: About }) {
+export function RaiseForm(props: { sites: Opt[]; categories: Opt[]; policies: { priority: number; label: string }[]; phone: string; about?: About; title?: string }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(raiseTicket, undefined);
   const about = props.about;
+  const [title, setTitle] = useState(props.title ?? "");
+  const [desc, setDesc] = useState("");
+  const [solved, setSolved] = useState(false);
+  if (solved)
+    return (
+      <section className="panel empty">
+        <p>
+          <strong>Glad that sorted it.</strong>
+        </p>
+        <p className="muted">Nothing has been sent to IT.</p>
+        <Link className="btn primary" href="/my">
+          Back to my jobs
+        </Link>
+      </section>
+    );
   return (
     <form action={action} className="panel panel-body form">
       {state?.error && <p className="error">{state.error}</p>}
@@ -25,12 +42,13 @@ export function RaiseForm(props: { sites: Opt[]; categories: Opt[]; policies: { 
       )}
       <div className="field">
         <label htmlFor="f-title">What&apos;s the problem?</label>
-        <input className="input" id="f-title" name="title" required maxLength={160} placeholder={about ? `What's wrong with the ${about.name}?` : "e.g. Label printer printing blank labels"} />
+        <input className="input" id="f-title" name="title" required maxLength={160} defaultValue={props.title} onChange={(e) => setTitle(e.target.value)} placeholder={about ? `What's wrong with the ${about.name}?` : "e.g. Label printer printing blank labels"} />
       </div>
       <div className="field">
         <label htmlFor="f-desc">Details</label>
-        <textarea id="f-desc" name="description" required placeholder="What happened, when it started, and what you've tried." />
+        <textarea id="f-desc" name="description" required placeholder="What happened, when it started, and what you've tried." onChange={(e) => setDesc(e.target.value)} />
       </div>
+      {!about && <HelpSuggestions text={`${title} ${desc.slice(0, 200)}`} onSolved={() => setSolved(true)} />}
       <div className="field">
         <span className="flabel">Screenshots or photos</span>
         <FilePicker />

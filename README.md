@@ -4,7 +4,7 @@ A bespoke IT app for raising and handling IT jobs, managing inventory, keeping p
 
 ## Where we are
 
-**Phases 1 to 3 are built and tested, using placeholder settings.** Phase 3 (network) is tested against an example network and a stand-in UniFi server; nothing real is connected yet.
+**Phases 1 to 4 are built and tested, using placeholder settings.** Phase 3 (network) is tested against an example network and a stand-in UniFi server; nothing real is connected yet.
 
 **Phase 1 (tickets):** Slack notifications are built and tested against a stand-in Slack; they need a Slack app to go live (see `docs/slack-setup.md`). Raising jobs from Slack is still to come.
 
@@ -62,6 +62,25 @@ A bespoke IT app for raising and handling IT jobs, managing inventory, keeping p
 
 The UniFi adapters follow UniFi's published APIs but haven't met real kit yet. Expect a small fix or two when the first real console or cloud key is connected.
 
+## What Phase 4 does (starters and leavers, help articles)
+
+WhatsApp was left out of Phase 4 by choice. It can be added later through WhatsApp's official Business API.
+
+**Starters and leavers** (IT team, under Starters & leavers)
+- Add a starter or leaver with their name, email, site, job title, manager and first or last day. Each one gets a checklist copied from the standard list. Admins edit the standard lists in Settings → Starter checklist / Leaver checklist; the defaults are placeholders.
+- **Starters:** pick spare kit from the inventory when adding them. Ticking "Hand out…" checks the item out to them, linked to their IT Hub account once they've signed up with that email.
+- **Leavers:** pick their account and every item assigned to them is added as "Collect…". Ticking it checks the item back in as spare at their site. Anything they're given later shows under "Still has".
+- Unticking a kit task puts the item back where it was, so the inventory always matches the checklist. Extra one-off tasks can be added per person.
+- A list is marked done when everything is ticked. It can be cancelled and reopened.
+- Starters and leavers due in the next 14 days show under Coming up on the dashboard. The daily IT reminder mentions them a week before, the day before, on the day and every day after while jobs are left.
+
+**Help articles**
+- IT write how-to guides in a simple editor with a preview. Formatting: headings, numbered and bullet lists, bold, links and tips. Screenshots can be pasted in or uploaded. Articles stay drafts until published.
+- Staff get a Help page (it appears once something is published) with search, and can answer "Did this help?".
+- While someone types a new job, matching articles appear under the form. If one fixes the problem, they tap **This fixed it** and nothing is sent to IT.
+- The Help articles page shows views, how helpful each article was, and how many jobs weren't needed.
+- Articles are shown safely: nothing in one can add scripts or hidden links, and images only come from IT Hub's own uploads or https.
+
 ## Placeholders to replace
 
 | What | Placeholder now | Where to change it |
@@ -73,6 +92,7 @@ The UniFi adapters follow UniFi's published APIs but haven't met real kit yet. E
 | Categories | Hardware, Software, Network, Printer, Onboarding, Request, Other | Settings → Categories |
 | First IT admin | Whatever `ADMIN_EMAIL` is set to | `.env`, then `npm run db:seed` |
 | Logo | Low-res crop from a website screenshot | `public/brand/logo.png` |
+| Starter and leaver checklists | 7 starter and 6 leaver tasks (email account, Slack, licences, kit, passwords…) | Settings → Starter checklist / Leaver checklist |
 | Kit types | Laptop, Desktop, Monitor, Printer, Label printer, Scanner, Raspberry Pi, Phone, Tablet, Network, Other | Settings → Kit types |
 | Microsoft / Google / Slack sign-in | Off until keys are added | `.env` |
 | Email sending | Printed to the server log | `SMTP_*` in `.env` |
@@ -101,7 +121,7 @@ npm test                      # unit and database tests (uses the ithub_test dat
 npm run build && npm run test:e2e   # end-to-end in a browser (uses the ithub_e2e database)
 ```
 
-The end-to-end run walks through the whole story: an admin joins by invite and sets up an authenticator, a member of staff raises a job with a screenshot on a phone, IT replies, adds a private note, logs time and resolves it, the requester sees the reply but not the note and rates it, signing in again asks for a code, and the admin invites a tech and changes SLA targets. It also checks every message that would have gone to Slack, using a stand-in Slack server (`tests/fake-slack.ts`). The network tests use a stand-in UniFi server (`tests/fake-unifi.ts`) that answers like a console and the UniFi cloud: a wrong key, connecting, the site/device/search pages, a printer showing as online, kit added to the inventory, an access point dropping off and coming back, and the example network on the dashboard and a phone.
+The end-to-end run walks through the whole story: an admin joins by invite and sets up an authenticator, a member of staff raises a job with a screenshot on a phone, IT replies, adds a private note, logs time and resolves it, the requester sees the reply but not the note and rates it, signing in again asks for a code, and the admin invites a tech and changes SLA targets. It also checks every message that would have gone to Slack, using a stand-in Slack server (`tests/fake-slack.ts`). The Phase 4 run writes a help article with a screenshot, has a member of staff find it in Help, then fix a problem from a suggestion while raising a job, so nothing is sent. It also takes a starter and a leaver through their checklists, with their laptops checked out and back in. The network tests use a stand-in UniFi server (`tests/fake-unifi.ts`) that answers like a console and the UniFi cloud: a wrong key, connecting, the site/device/search pages, a printer showing as online, kit added to the inventory, an access point dropping off and coming back, and the example network on the dashboard and a phone.
 
 ### Code map
 
@@ -110,6 +130,7 @@ The end-to-end run walks through the whole story: an admin joins by invite and s
 - `src/lib/tickets.ts`: everything that creates, reads and changes tickets. `src/lib/sla.ts` and `src/lib/assignment.ts`: SLA maths and assignment rules.
 - `src/lib/invites.ts`: IT invites. Only a hash of each link is stored.
 - `src/lib/network/`: UniFi. `sources/` reads a console, the cloud or the example network into one shape; `poll.ts` saves it, debounces outages and sends alerts; `queries.ts` feeds the pages.
+- `src/lib/people.ts`: starters and leavers. `src/lib/help.ts`: help articles and search. `src/components/markdown.tsx`: the safe article formatter.
 - `src/app/`: pages. `/my/*` is the staff portal, `/it/*` the IT side, `/invite/*`, `/setup-2fa` and `/verify` the IT sign-in steps.
 
 ## Decisions so far
@@ -135,7 +156,7 @@ The end-to-end run walks through the whole story: an admin joins by invite and s
 1. **Tickets**: built and tested with placeholders, including Slack notifications. Raising jobs from Slack still to add.
 2. **Inventory + printers**: built and tested. Live printer status (SNMP) waits for hosting on the office network.
 3. **Networking**: built and tested against an example network and a stand-in UniFi. Waiting for real console or cloud keys.
-4. **WhatsApp and extras**
+4. **Extras**: starters and leavers, and help articles. Built and tested. WhatsApp left for later.
 
 Each phase is tested before moving to the next.
 
@@ -151,6 +172,6 @@ Each phase is tested before moving to the next.
 - Assignment table, real SLA targets and site names
 - Slack details: slash command, channel, two-way sync, notifications
 - Hosting (cloud or on-site server), compliance and budget
-- WhatsApp: purpose, official API or not
+- WhatsApp (left out of Phase 4): purpose, official API or not
 - UniFi setup: controller type and where it is reachable from
 - Printer makes and whether live status is needed
