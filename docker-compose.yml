@@ -1,0 +1,18 @@
+# Database for trying IT Hub on your own computer (`npm run try`). Not for the live app.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: ithub-try
+      POSTGRES_DB: ithub_try
+    ports:
+      - "5433:5432"
+    volumes:
+      - ithub-try-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ithub_try"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+volumes:
+  ithub-try-db:

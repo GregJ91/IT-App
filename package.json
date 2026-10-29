@@ -13,7 +13,8 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:demo": "tsx scripts/demo-data.ts",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "try": "tsx scripts/try-it.ts"
   },
   "dependencies": {
     "better-auth": "1.7.7",

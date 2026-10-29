@@ -99,6 +99,10 @@ WhatsApp was left out of Phase 4 by choice. It can be added later through WhatsA
 | UniFi | Not connected | Settings → Network (UniFi) |
 | Slack | Off until a Slack app is connected | `SLACK_BOT_TOKEN` and `SLACK_CHANNEL` in `.env` ([setup steps](docs/slack-setup.md)) |
 
+## Trying it
+
+To try the app on your own computer with example data, see [docs/try-it.md](docs/try-it.md). After installing Node and Docker Desktop, it's `npm install` then `npm run try`.
+
 ## Running it
 
 Needs Node 22 and PostgreSQL 16.

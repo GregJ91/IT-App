@@ -10,6 +10,8 @@ export function SignInForm({ next }: { next: string | null }) {
   const [busy, setBusy] = useState(false);
   return (
     <form
+      // POST, so the password never ends up in the address bar if scripts fail to load.
+      method="post"
       className="form"
       style={{ gap: 10 }}
       onSubmit={async (e) => {
